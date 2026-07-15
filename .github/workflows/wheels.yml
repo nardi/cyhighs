@@ -1,7 +1,8 @@
 name: Build wheels
 
 # Build a matrix of binary wheels and a source distribution. Runs on tags, on
-# manual dispatch, and when the build configuration changes on a pull request.
+# manual dispatch, when the build configuration changes on a pull request, and
+# when a GitHub release is published, which also triggers the PyPI publish.
 on:
   push:
     tags: ["v*"]
@@ -11,6 +12,8 @@ on:
       - "pyproject.toml"
       - "CMakeLists.txt"
       - ".github/workflows/wheels.yml"
+  release:
+    types: [published]
 
 concurrency:
   group: wheels-${{ github.ref }}
@@ -69,3 +72,29 @@ jobs:
         with:
           name: sdist
           path: ./dist/*.tar.gz
+
+  publish:
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/cyhighs/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - name: Download sdist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
