@@ -1,0 +1,87 @@
+[build-system]
+# scikit-build-core drives a CMake build so that we can compile the HiGHS C++
+# library from source and link our Cython extension against it. Cython transpiles
+# the .pyx source to C, and cmake plus ninja are pulled in as PyPI wheels so that
+# no system level build tools other than a C and C++ compiler are required.
+requires = [
+    "scikit-build-core>=0.10",
+    "cython>=3.0",
+    "cmake>=3.24",
+    "ninja>=1.11",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "cyhighs"
+version = "0.1.0"
+description = "Cython bindings to the HiGHS linear and mixed integer optimization solver"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Nardi Lam", email = "mail@nardilam.nl" }]
+keywords = ["linear programming", "optimization", "solver", "HiGHS", "linprog"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Cython",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+# Minimum versions are kept as low as the Python 3.11 floor allows. numpy 1.23.2
+# and scipy 1.9.2 are the first releases to publish CPython 3.11 wheels, and the
+# bindings deliberately avoid the numpy C API so there is no tighter coupling.
+dependencies = ["numpy>=1.23.2", "scipy>=1.9.2"]
+
+[project.urls]
+Homepage = "https://github.com/nardilam/cyhighs"
+Repository = "https://github.com/nardilam/cyhighs"
+
+[dependency-groups]
+# Development tooling. ruff handles both formatting and linting, ty performs
+# static type checking, and pytest runs the test suite.
+dev = ["pytest>=8.0", "ruff>=0.6", "ty>=0.0.1a1"]
+
+[tool.scikit-build]
+# Use the modern metadata directory layout and always rebuild the extension in
+# editable installs so that source changes are picked up.
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/cyhighs"]
+minimum-version = "0.10"
+
+[tool.scikit-build.cmake]
+version = ">=3.24"
+build-type = "Release"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Enable a broad, useful rule set. E and W are pycodestyle, F is pyflakes, I is
+# import sorting, UP is pyupgrade, B is bugbear, and D is pydocstyle so that the
+# heavy documentation requirement is enforced.
+select = ["E", "W", "F", "I", "UP", "B", "D"]
+# D203 and D213 conflict with the chosen docstring conventions, and D107 would
+# demand a docstring on every __init__ which the class docstring already covers.
+ignore = ["D203", "D213", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests do not need module and function docstrings on every item.
+"tests/*" = ["D100", "D103", "D104"]
+
+[tool.ty.rules]
+# scipy and the compiled extension module do not ship complete type stubs, so
+# unresolved attributes on those are expected and should not fail the check.
+unresolved-import = "ignore"

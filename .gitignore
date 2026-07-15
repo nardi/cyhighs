@@ -1,0 +1,32 @@
+# Build output
+/build/
+/dist/
+/wheelhouse/
+*.egg-info/
+_skbuild/
+
+# Compiled artifacts
+*.so
+*.pyd
+*.dll
+*.dylib
+*.o
+*.obj
+
+# Cython generated C sources
+src/cyhighs/_core.c
+
+# Virtual environments
+.venv/
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ty_cache/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
