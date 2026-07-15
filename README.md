@@ -18,8 +18,10 @@ dependencies.
 
 Three interfaces are provided, from lowest to highest level.
 
-The main array interface takes the constraint matrix in compressed sparse column
-form:
+The main array interface takes a single constraint matrix already merged in
+compressed sparse column form, together with per row lower and upper bounds. An
+inequality row uses a lower bound of negative infinity, an equality row uses
+equal bounds:
 
 ```python
 import numpy as np
@@ -27,10 +29,11 @@ from cyhighs import solve_linear_problem
 
 solution = solve_linear_problem(
     objective_coefficients=np.array([-1.0, -2.0]),
-    inequality_matrix_values=np.array([1.0, 1.0]),
-    inequality_matrix_row_indices=np.array([0, 0]),
-    inequality_matrix_column_pointers=np.array([0, 1, 2]),
-    inequality_upper_bounds=np.array([4.0]),
+    constraint_matrix_values=np.array([1.0, 1.0]),
+    constraint_matrix_row_indices=np.array([0, 0]),
+    constraint_matrix_column_pointers=np.array([0, 1, 2]),
+    constraint_lower_bounds=np.array([-np.inf]),
+    constraint_upper_bounds=np.array([4.0]),
     variable_lower_bounds=np.array([0.0, 0.0]),
     variable_upper_bounds=np.array([10.0, 10.0]),
 )

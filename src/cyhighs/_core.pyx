@@ -100,6 +100,95 @@ def highs_infinity():
         Highs_destroy(highs)
 
 
+def merge_constraint_matrices_csc(
+    HighsInt number_of_columns,
+    double[::1] inequality_values not None,
+    HighsInt[::1] inequality_indices not None,
+    HighsInt[::1] inequality_pointers not None,
+    HighsInt number_of_inequality_rows,
+    double[::1] equality_values not None,
+    HighsInt[::1] equality_indices not None,
+    HighsInt[::1] equality_pointers not None,
+):
+    """Column merge two CSC matrices that share the same set of columns.
+
+    The two matrices are stacked vertically, with the equality rows placed below
+    the inequality rows. Because both matrices are in compressed sparse column
+    form, the merge walks the columns and, for each column, copies the
+    inequality entries followed by the equality entries. The equality row indices
+    are shifted down by ``number_of_inequality_rows`` so that they occupy the
+    rows beneath the inequality block.
+
+    All inputs must already have the exact dtype and contiguity used by the C
+    API, which the Python caller guarantees. Empty blocks are represented by a
+    pointer array of length ``number_of_columns + 1`` filled with zeros and empty
+    value and index arrays.
+
+    Parameters
+    ----------
+    number_of_columns : int
+        The shared number of columns of both matrices.
+    inequality_values, inequality_indices, inequality_pointers : memoryview
+        The CSC arrays of the inequality matrix.
+    number_of_inequality_rows : int
+        The number of rows in the inequality matrix, used as the offset for the
+        equality row indices.
+    equality_values, equality_indices, equality_pointers : memoryview
+        The CSC arrays of the equality matrix.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        The merged ``(values, row_indices, column_pointers)`` triple in CSC form.
+    """
+    cdef HighsInt number_of_inequality_nonzeros = inequality_values.shape[0]
+    cdef HighsInt number_of_equality_nonzeros = equality_values.shape[0]
+    cdef HighsInt total_nonzeros = (
+        number_of_inequality_nonzeros + number_of_equality_nonzeros
+    )
+
+    # Allocate the output arrays through NumPy and access them as typed memory
+    # views. This keeps the extension free of the NumPy C API.
+    merged_values_array = np.empty(total_nonzeros, dtype=np.float64)
+    merged_indices_array = np.empty(total_nonzeros, dtype=np.int32)
+    merged_pointers_array = np.empty(number_of_columns + 1, dtype=np.int32)
+
+    cdef double[::1] merged_values = merged_values_array
+    cdef HighsInt[::1] merged_indices = merged_indices_array
+    cdef HighsInt[::1] merged_pointers = merged_pointers_array
+
+    cdef HighsInt column
+    cdef HighsInt entry
+    cdef HighsInt write_position = 0
+
+    # Walk the columns once, copying both blocks into place and building the
+    # merged column pointers as we go. No Python objects are touched here, so the
+    # loop can run without the GIL.
+    with nogil:
+        for column in range(number_of_columns):
+            merged_pointers[column] = write_position
+
+            for entry in range(
+                inequality_pointers[column], inequality_pointers[column + 1]
+            ):
+                merged_indices[write_position] = inequality_indices[entry]
+                merged_values[write_position] = inequality_values[entry]
+                write_position += 1
+
+            for entry in range(
+                equality_pointers[column], equality_pointers[column + 1]
+            ):
+                merged_indices[write_position] = (
+                    equality_indices[entry] + number_of_inequality_rows
+                )
+                merged_values[write_position] = equality_values[entry]
+                write_position += 1
+
+        merged_pointers[number_of_columns] = write_position
+
+    return merged_values_array, merged_indices_array, merged_pointers_array
+
+
 cdef int _apply_options(void* highs, object option_settings) except -1:
     """Apply a sequence of option settings to a HiGHS instance.
 

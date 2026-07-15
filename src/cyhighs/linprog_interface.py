@@ -105,13 +105,21 @@ def _process_integrality(integrality, number_of_columns: int):
     return integrality_array
 
 
-def _to_csc(matrix):
-    """Convert a dense or sparse matrix to a SciPy CSC matrix, or None."""
+def _as_sparse(matrix):
+    """Return a SciPy sparse matrix, or None.
+
+    An already sparse matrix is passed through unchanged so that its format is
+    preserved and the sparse wrapper can pick the efficient merge path. A dense
+    array like input is converted to CSR, a single consistent format so that two
+    dense inputs do not trip the wrapper's mixed format rejection.
+    """
     if matrix is None:
         return None
-    from scipy.sparse import csc_matrix
+    from scipy.sparse import csr_matrix, issparse
 
-    return csc_matrix(matrix)
+    if issparse(matrix):
+        return matrix
+    return csr_matrix(matrix)
 
 
 def linprog(
@@ -168,8 +176,8 @@ def linprog(
     lower_bounds, upper_bounds = _process_bounds(bounds, number_of_columns)
     integrality_array = _process_integrality(integrality, number_of_columns)
 
-    inequality_matrix = _to_csc(A_ub)
-    equality_matrix = _to_csc(A_eq)
+    inequality_matrix = _as_sparse(A_ub)
+    equality_matrix = _as_sparse(A_eq)
 
     inequality_upper_bounds = None if b_ub is None else np.ascontiguousarray(b_ub, dtype=np.float64)
     equality_right_hand_sides = (
