@@ -44,7 +44,12 @@ Repository = "https://github.com/nardilam/cyhighs"
 [dependency-groups]
 # Development tooling. ruff handles both formatting and linting, ty performs
 # static type checking, and pytest runs the test suite.
-dev = ["pytest>=8.0", "ruff>=0.6", "ty>=0.0.1a1"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "stubgen-pyx>=0.2.16",
+    "ty>=0.0.1a1",
+]
 
 [tool.scikit-build]
 # Use the modern metadata directory layout and always rebuild the extension in
