@@ -42,7 +42,9 @@ jobs:
           # Build CPython 3.11 through 3.14. The free threaded builds are left
           # out for now while Cython support for them is still settling.
           CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
-          CIBW_SKIP: "*-musllinux_i686 *_i686"
+          # Skip 32-bit targets. HiGHS with its bundled OpenBLAS is not viable on
+          # 32-bit, and there are no 32-bit SciPy wheels for the test step.
+          CIBW_SKIP: "*-musllinux_i686 *_i686 *-win32"
           # HiGHS is C++17. macOS arm64 requires a deployment target of at least
           # 11.0 for the C++17 standard library features HiGHS relies on.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
