@@ -13,9 +13,10 @@ Options are supplied to the solving functions as a mapping from
 {HighsOption.TIME_LIMIT: 10.0, HighsOption.OUTPUT_FLAG: False}
 ```
 
-The set of options declared here is a curated subset of the full HiGHS option
-list, chosen to cover the most common needs. The value kinds match the four
-typed setters in the HiGHS C API.
+The options declared here cover every user-settable HiGHS option (the ones
+documented in the HiGHS options reference), excluding options that only exist
+in debug builds of HiGHS. The value kinds match the four typed setters in the
+HiGHS C API.
 """
 
 from __future__ import annotations
@@ -111,6 +112,322 @@ class HighsOption(Enum):
 
     HIGHS_DEBUG_LEVEL = ("highs_debug_level", OPTION_KIND_INT)
     """Internal debugging verbosity from 0 to 4. Integer, default 0."""
+
+    RANGING = ("ranging", OPTION_KIND_STRING)
+    """Compute cost, bound, RHS and basic solution ranging: "off" or "on". String, default
+    "off"."""
+
+    INFINITE_COST = ("infinite_cost", OPTION_KIND_DOUBLE)
+    """Limit on |cost coefficient|: values greater than or equal to this will be treated as
+    infinite. Double, default 1e20."""
+
+    INFINITE_BOUND = ("infinite_bound", OPTION_KIND_DOUBLE)
+    """Limit on |constraint bound|: values greater than or equal to this will be treated as
+    infinite. Double, default 1e20."""
+
+    SMALL_MATRIX_VALUE = ("small_matrix_value", OPTION_KIND_DOUBLE)
+    """Lower limit on |matrix entries|: values less than or equal to this will be treated
+    as zero. Double, default 1e-9."""
+
+    LARGE_MATRIX_VALUE = ("large_matrix_value", OPTION_KIND_DOUBLE)
+    """Upper limit on |matrix entries|: values greater than or equal to this will be
+    treated as infinite. Double, default 1e15."""
+
+    KKT_TOLERANCE = ("kkt_tolerance", OPTION_KIND_DOUBLE)
+    """If changed from its default value, this tolerance is used for all feasibility and
+    optimality (KKT) measures. Double, default 1e-7."""
+
+    PRIMAL_RESIDUAL_TOLERANCE = ("primal_residual_tolerance", OPTION_KIND_DOUBLE)
+    """Primal residual tolerance. Double, default 1e-7."""
+
+    DUAL_RESIDUAL_TOLERANCE = ("dual_residual_tolerance", OPTION_KIND_DOUBLE)
+    """Dual residual tolerance. Double, default 1e-7."""
+
+    OPTIMALITY_TOLERANCE = ("optimality_tolerance", OPTION_KIND_DOUBLE)
+    """Optimality tolerance. Double, default 1e-7."""
+
+    USER_OBJECTIVE_SCALE = ("user_objective_scale", OPTION_KIND_INT)
+    """Exponent of power-of-two objective scaling for model. Integer, default 0."""
+
+    USER_BOUND_SCALE = ("user_bound_scale", OPTION_KIND_INT)
+    """Exponent of power-of-two bound scaling for model. Integer, default 0."""
+
+    HIGHS_ANALYSIS_LEVEL = ("highs_analysis_level", OPTION_KIND_INT)
+    """Analysis level in HiGHS. Integer, default 0."""
+
+    SIMPLEX_STRATEGY = ("simplex_strategy", OPTION_KIND_INT)
+    """Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (SIP); 3 =>
+    Dual (PAMI); 4 => Primal. Integer, default 1."""
+
+    SIMPLEX_SCALE_STRATEGY = ("simplex_scale_strategy", OPTION_KIND_INT)
+    """Simplex scaling strategy: off / choose / equilibration (default) / forced
+    equilibration / max value (0/1/2/3/4). Integer, default 2."""
+
+    SIMPLEX_CRASH_STRATEGY = ("simplex_crash_strategy", OPTION_KIND_INT)
+    """Strategy for simplex crash: off / LTSSF / Bixby (0/1/2). Integer, default 0."""
+
+    SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY = ("simplex_dual_edge_weight_strategy", OPTION_KIND_INT)
+    """Strategy for simplex dual edge weights: Choose / Dantzig / Devex / Steepest Edge
+    (-1/0/1/2). Integer, default -1."""
+
+    SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY = ("simplex_primal_edge_weight_strategy", OPTION_KIND_INT)
+    """Strategy for simplex primal edge weights: Choose / Dantzig / Devex / Steepest Edge
+    (-1/0/1/2). Integer, default -1."""
+
+    SIMPLEX_ITERATION_LIMIT = ("simplex_iteration_limit", OPTION_KIND_INT)
+    """Iteration limit for simplex solver when solving LPs, but not subproblems in the MIP
+    solver. Integer, default a very large value."""
+
+    SIMPLEX_UPDATE_LIMIT = ("simplex_update_limit", OPTION_KIND_INT)
+    """Limit on the number of simplex UPDATE operations. Integer, default 5000."""
+
+    SIMPLEX_MIN_CONCURRENCY = ("simplex_min_concurrency", OPTION_KIND_INT)
+    """Minimum level of concurrency in parallel simplex. Integer, default 1."""
+
+    SIMPLEX_MAX_CONCURRENCY = ("simplex_max_concurrency", OPTION_KIND_INT)
+    """Maximum level of concurrency in parallel simplex. Integer, default 8."""
+
+    TIMELESS_LOG = ("timeless_log", OPTION_KIND_BOOL)
+    """Suppression of time-based data in logging. Boolean, default False."""
+
+    LOG_FILE = ("log_file", OPTION_KIND_STRING)
+    """Log file. String, default ""."""
+
+    WRITE_MODEL_TO_FILE = ("write_model_to_file", OPTION_KIND_BOOL)
+    """Write the model to a file. Boolean, default False."""
+
+    WRITE_PRESOLVED_MODEL_TO_FILE = ("write_presolved_model_to_file", OPTION_KIND_BOOL)
+    """Write the presolved model to a file. Boolean, default False."""
+
+    WRITE_SOLUTION_TO_FILE = ("write_solution_to_file", OPTION_KIND_BOOL)
+    """Write the primal and dual solution to a file. Boolean, default False."""
+
+    WRITE_SOLUTION_STYLE = ("write_solution_style", OPTION_KIND_INT)
+    """Style of solution file (raw = computer-readable, pretty = human-readable): -1 =>
+    HiGHS old raw (deprecated); 0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 =>
+    Glpsol pretty; 4 => HiGHS sparse raw. Integer, default 0."""
+
+    GLPSOL_COST_ROW_LOCATION = ("glpsol_cost_row_location", OPTION_KIND_INT)
+    """Location of cost row for Glpsol file: -2 => Last; -1 => None; 0 => None if empty,
+    otherwise data file location; 1 <= n <= num_row => Location n; n > num_row => Last.
+    Integer, default 0."""
+
+    ICRASH = ("icrash", OPTION_KIND_BOOL)
+    """Run iCrash. Boolean, default False."""
+
+    ICRASH_DUALIZE = ("icrash_dualize", OPTION_KIND_BOOL)
+    """Dualize strategy for iCrash. Boolean, default False."""
+
+    ICRASH_STRATEGY = ("icrash_strategy", OPTION_KIND_STRING)
+    """Strategy for iCrash. String, default "ICA"."""
+
+    ICRASH_STARTING_WEIGHT = ("icrash_starting_weight", OPTION_KIND_DOUBLE)
+    """iCrash starting weight. Double, default 1e-3."""
+
+    ICRASH_ITERATIONS = ("icrash_iterations", OPTION_KIND_INT)
+    """iCrash iterations. Integer, default 30."""
+
+    ICRASH_APPROX_ITER = ("icrash_approx_iter", OPTION_KIND_INT)
+    """iCrash approximate minimization iterations. Integer, default 50."""
+
+    ICRASH_EXACT = ("icrash_exact", OPTION_KIND_BOOL)
+    """Exact subproblem solution for iCrash. Boolean, default False."""
+
+    ICRASH_BREAKPOINTS = ("icrash_breakpoints", OPTION_KIND_BOOL)
+    """Exact subproblem solution for iCrash. Boolean, default False."""
+
+    READ_SOLUTION_FILE = ("read_solution_file", OPTION_KIND_STRING)
+    """Read solution file. String, default ""."""
+
+    READ_BASIS_FILE = ("read_basis_file", OPTION_KIND_STRING)
+    """Read basis file. String, default ""."""
+
+    WRITE_MODEL_FILE = ("write_model_file", OPTION_KIND_STRING)
+    """Write model file. String, default ""."""
+
+    SOLUTION_FILE = ("solution_file", OPTION_KIND_STRING)
+    """Write solution file. String, default ""."""
+
+    WRITE_BASIS_FILE = ("write_basis_file", OPTION_KIND_STRING)
+    """Write basis file. String, default ""."""
+
+    WRITE_PRESOLVED_MODEL_FILE = ("write_presolved_model_file", OPTION_KIND_STRING)
+    """Write presolved model file. String, default ""."""
+
+    WRITE_IIS_MODEL_FILE = ("write_iis_model_file", OPTION_KIND_STRING)
+    """Write IIS model file. String, default ""."""
+
+    MIP_DETECT_SYMMETRY = ("mip_detect_symmetry", OPTION_KIND_BOOL)
+    """Whether MIP symmetry should be detected. Boolean, default True."""
+
+    MIP_ALLOW_RESTART = ("mip_allow_restart", OPTION_KIND_BOOL)
+    """Whether MIP restart is permitted. Boolean, default True."""
+
+    MIP_MAX_STALL_NODES = ("mip_max_stall_nodes", OPTION_KIND_INT)
+    """MIP solver max number of nodes where estimate is above cutoff bound. Integer,
+    default a very large value."""
+
+    MIP_MAX_START_NODES = ("mip_max_start_nodes", OPTION_KIND_INT)
+    """MIP solver max number of nodes when completing a partial MIP start. Integer, default
+    500."""
+
+    MIP_IMPROVING_SOLUTION_SAVE = ("mip_improving_solution_save", OPTION_KIND_BOOL)
+    """Whether improving MIP solutions should be saved. Boolean, default False."""
+
+    MIP_IMPROVING_SOLUTION_REPORT_SPARSE = (
+        "mip_improving_solution_report_sparse",
+        OPTION_KIND_BOOL,
+    )
+    """Whether improving MIP solutions should be reported in sparse format. Boolean,
+    default False."""
+
+    MIP_IMPROVING_SOLUTION_FILE = ("mip_improving_solution_file", OPTION_KIND_STRING)
+    """File for reporting improving MIP solutions. Not reported for an empty string.
+    String, default ""."""
+
+    MIP_ROOT_PRESOLVE_ONLY = ("mip_root_presolve_only", OPTION_KIND_BOOL)
+    """Whether MIP presolve is only applied at the root node. Boolean, default False."""
+
+    MIP_LIFTING_FOR_PROBING = ("mip_lifting_for_probing", OPTION_KIND_INT)
+    """Level of lifting for probing that is used. Integer, default -1."""
+
+    MIP_MAX_LEAVES = ("mip_max_leaves", OPTION_KIND_INT)
+    """MIP solver max number of leaf nodes. Integer, default a very large value."""
+
+    MIP_MAX_IMPROVING_SOLS = ("mip_max_improving_sols", OPTION_KIND_INT)
+    """Limit on the number of improving solutions found to stop the MIP solver prematurely.
+    Integer, default a very large value."""
+
+    MIP_LP_AGE_LIMIT = ("mip_lp_age_limit", OPTION_KIND_INT)
+    """Maximal age of dynamic LP rows before they are removed from the LP relaxation in the
+    MIP solver. Integer, default 10."""
+
+    MIP_POOL_AGE_LIMIT = ("mip_pool_age_limit", OPTION_KIND_INT)
+    """Maximal age of rows in the MIP solver cutpool before they are deleted. Integer,
+    default 30."""
+
+    MIP_POOL_SOFT_LIMIT = ("mip_pool_soft_limit", OPTION_KIND_INT)
+    """Soft limit on the number of rows in the MIP solver cutpool for dynamic age
+    adjustment. Integer, default 10000."""
+
+    MIP_PSCOST_MINRELIABLE = ("mip_pscost_minreliable", OPTION_KIND_INT)
+    """Minimal number of observations before MIP solver pseudo costs are considered
+    reliable. Integer, default 8."""
+
+    MIP_MIN_CLIQUETABLE_ENTRIES_FOR_PARALLELISM = (
+        "mip_min_cliquetable_entries_for_parallelism",
+        OPTION_KIND_INT,
+    )
+    """Minimal number of entries in the MIP solver cliquetable before neighbourhood queries
+    of the conflict graph use parallel processing. Integer, default 100000."""
+
+    MIP_REPORT_LEVEL = ("mip_report_level", OPTION_KIND_INT)
+    """MIP solver reporting level. Integer, default 1."""
+
+    MIP_HEURISTIC_EFFORT = ("mip_heuristic_effort", OPTION_KIND_DOUBLE)
+    """Effort spent for MIP heuristics. Double, default 0.05."""
+
+    MIP_HEURISTIC_RUN_FEASIBILITY_JUMP = ("mip_heuristic_run_feasibility_jump", OPTION_KIND_BOOL)
+    """Use the feasibility jump heuristic. Boolean, default True."""
+
+    MIP_HEURISTIC_RUN_RINS = ("mip_heuristic_run_rins", OPTION_KIND_BOOL)
+    """Use the RINS heuristic. Boolean, default True."""
+
+    MIP_HEURISTIC_RUN_RENS = ("mip_heuristic_run_rens", OPTION_KIND_BOOL)
+    """Use the RENS heuristic. Boolean, default True."""
+
+    MIP_HEURISTIC_RUN_ROOT_REDUCED_COST = ("mip_heuristic_run_root_reduced_cost", OPTION_KIND_BOOL)
+    """Use the rootReducedCost heuristic. Boolean, default True."""
+
+    MIP_HEURISTIC_RUN_ZI_ROUND = ("mip_heuristic_run_zi_round", OPTION_KIND_BOOL)
+    """Use the ZI Round heuristic. Boolean, default False."""
+
+    MIP_HEURISTIC_RUN_SHIFTING = ("mip_heuristic_run_shifting", OPTION_KIND_BOOL)
+    """Use the Shifting heuristic. Boolean, default False."""
+
+    MIP_ALLOW_CUT_SEPARATION_AT_NODES = ("mip_allow_cut_separation_at_nodes", OPTION_KIND_BOOL)
+    """Whether cut separation at nodes other than the root node is permitted. Boolean,
+    default True."""
+
+    MIP_MIN_LOGGING_INTERVAL = ("mip_min_logging_interval", OPTION_KIND_DOUBLE)
+    """MIP minimum logging interval. Double, default 5."""
+
+    MIP_LP_SOLVER = ("mip_lp_solver", OPTION_KIND_STRING)
+    """MIP LP solver: "choose", "simplex", "ipm", "ipx" or "hipo". String, default
+    "choose"."""
+
+    MIP_IPM_SOLVER = ("mip_ipm_solver", OPTION_KIND_STRING)
+    """MIP IPM solver: "choose", "ipx" or "hipo". String, default "choose"."""
+
+    IPM_OPTIMALITY_TOLERANCE = ("ipm_optimality_tolerance", OPTION_KIND_DOUBLE)
+    """IPM optimality tolerance. Double, default 1e-8."""
+
+    MIP_SEARCH_SIMULATE_CONCURRENCY = ("mip_search_simulate_concurrency", OPTION_KIND_BOOL)
+    """Simulate MIP search concurrency on a single thread. Boolean, default False."""
+
+    IPM_ITERATION_LIMIT = ("ipm_iteration_limit", OPTION_KIND_INT)
+    """Iteration limit for IPM solver. Integer, default a very large value."""
+
+    HIPO_SYSTEM = ("hipo_system", OPTION_KIND_STRING)
+    """HiPO Newton system: "choose", "augmented" or "normaleq". String, default "choose"."""
+
+    HIPO_PARALLEL_TYPE = ("hipo_parallel_type", OPTION_KIND_STRING)
+    """HiPO parallelism: "tree", "node" or "both". String, default "both"."""
+
+    HIPO_ORDERING = ("hipo_ordering", OPTION_KIND_STRING)
+    """HiPO matrix reordering: "choose", "metis", "amd" or "rcm". String, default "choose"."""
+
+    HIPO_BLOCK_SIZE = ("hipo_block_size", OPTION_KIND_INT)
+    """Block size for dense linear algebra within HiPO. Integer, default 128."""
+
+    PDLP_ITERATION_LIMIT = ("pdlp_iteration_limit", OPTION_KIND_INT)
+    """Iteration limit for PDLP solver. Integer, default a very large value."""
+
+    PDLP_SCALING_MODE = ("pdlp_scaling_mode", OPTION_KIND_INT)
+    """Scaling mode for PDLP solver (default = 5): 1 => Ruiz; 2 => L2; 4 => PC. Integer,
+    default 5."""
+
+    PDLP_RUIZ_ITERATIONS = ("pdlp_ruiz_iterations", OPTION_KIND_INT)
+    """Number of Ruiz scaling iteraitons for PDLP solver. Integer, default 10."""
+
+    PDLP_RESTART_STRATEGY = ("pdlp_restart_strategy", OPTION_KIND_INT)
+    """Restart strategy for PDLP solver: 0 => off; 1 => fixed; 2 => adaptive; 3 => Halpern.
+    Integer, default 2."""
+
+    PDLP_CUPDLPC_RESTART_METHOD = ("pdlp_cupdlpc_restart_method", OPTION_KIND_INT)
+    """Restart mode for cuPDLP-C solver: 0 => none; 1 => GPU (default); 2 => CPU. Integer,
+    default 1."""
+
+    PDLP_STEP_SIZE_STRATEGY = ("pdlp_step_size_strategy", OPTION_KIND_INT)
+    """Step size strategy for PDLP solver: 0 => fixed; 1 => adaptive; 2 => Malitsky-Pock; 3
+    => PID. Integer, default 1."""
+
+    PDLP_OPTIMALITY_TOLERANCE = ("pdlp_optimality_tolerance", OPTION_KIND_DOUBLE)
+    """PDLP optimality tolerance. Double, default 1e-7."""
+
+    QP_ALLOW_HOT_START = ("qp_allow_hot_start", OPTION_KIND_BOOL)
+    """Allow the active set QP solver to hot start. Boolean, default False."""
+
+    QP_ITERATION_LIMIT = ("qp_iteration_limit", OPTION_KIND_INT)
+    """Iteration limit for the active set QP solver. Integer, default a very large value."""
+
+    QP_NULLSPACE_LIMIT = ("qp_nullspace_limit", OPTION_KIND_INT)
+    """Nullspace limit for the active set QP solver. Integer, default 4000."""
+
+    QP_REGULARIZATION_VALUE = ("qp_regularization_value", OPTION_KIND_DOUBLE)
+    """Regularization value added to the Hessian in the active set QP solver. Double,
+    default 1e-7."""
+
+    IIS_STRATEGY = ("iis_strategy", OPTION_KIND_INT)
+    """Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic
+    LP; 4 => Prioritise columns; 8 => Find true IIS; 16 => Find relaxation IIS for MIP.
+    Integer, default 0."""
+
+    IIS_TIME_LIMIT = ("iis_time_limit", OPTION_KIND_DOUBLE)
+    """Time limit for computing IIS (seconds). Double, default infinity."""
+
+    BLEND_MULTI_OBJECTIVES = ("blend_multi_objectives", OPTION_KIND_BOOL)
+    """Blend multiple objectives or apply lexicographically. Boolean, default True."""
 
     @property
     def option_name(self) -> str:
