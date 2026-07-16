@@ -20,17 +20,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Linux wheels embed the prebuilt HiGHS static-apache archive, which is built
+  # against a recent glibc and needs glibc >= 2.38 to link. No manylinux
+  # container image provides that for x86_64, so Linux wheels are built directly
+  # on the native runners (Ubuntu 24.04 ships glibc 2.39) and repaired with
+  # auditwheel, which tags them manylinux_2_38+.
+  build_linux:
+    name: Linux ${{ matrix.os }} cp${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04       # Linux x86_64
+          - ubuntu-24.04-arm   # Linux aarch64
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build and repair wheel
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip build auditwheel patchelf
+          python -m build --wheel --outdir dist
+          # auditwheel bundles the external libraries (libstdc++, libgcc_s,
+          # libz) into the wheel and applies the highest compatible manylinux
+          # tag for the referenced glibc symbols.
+          auditwheel repair dist/*.whl --wheel-dir wheelhouse
+
+      - name: Test the repaired wheel
+        run: |
+          set -euxo pipefail
+          python -m pip install wheelhouse/*.whl
+          python -m pip install pytest scipy pytest-markdown-docs
+          pytest "${GITHUB_WORKSPACE}/tests" "${GITHUB_WORKSPACE}/docs"
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.os }}-cp${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # macOS and Windows wheels are built with cibuildwheel, which handles the
+  # per-Python builds and the delocate/delvewheel repair. glibc is not a concern
+  # on these platforms, so the prebuilt archives build in the standard images.
   build_wheels:
     name: Wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # One runner per platform and architecture. Linux aarch64 and macOS
-        # arm64 use native runners so that no emulation is needed.
         os:
-          - ubuntu-latest      # Linux x86_64 (manylinux and musllinux)
-          - ubuntu-24.04-arm   # Linux aarch64
           - macos-latest       # macOS arm64
           - windows-latest     # Windows AMD64
     steps:
@@ -42,9 +87,9 @@ jobs:
           # Build CPython 3.11 through 3.14. The free threaded builds are left
           # out for now while Cython support for them is still settling.
           CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
-          # Skip 32-bit targets. HiGHS with its bundled OpenBLAS is not viable on
-          # 32-bit, and there are no 32-bit SciPy wheels for the test step.
-          CIBW_SKIP: "*-musllinux_i686 *_i686 *-win32"
+          # Skip 32-bit targets. HiGHS is not viable on 32-bit and there are no
+          # 32-bit SciPy wheels for the test step.
+          CIBW_SKIP: "*_i686 *-win32"
           # HiGHS is C++17. macOS arm64 requires a deployment target of at least
           # 11.0 for the C++17 standard library features HiGHS relies on.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
@@ -77,7 +122,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_linux, build_wheels, build_sdist]
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     environment:
