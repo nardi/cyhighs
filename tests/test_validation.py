@@ -2,9 +2,9 @@
 
 import numpy as np
 import pytest
-from cyhighs._core import merge_constraint_matrices_csc
 from scipy.sparse import csc_matrix
 
+from cyhighs._core import merge_constraint_matrices_csc
 from cyhighs.validation import _as_index_array, solve_linear_problem
 
 

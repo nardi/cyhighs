@@ -1,9 +1,8 @@
 """Tests that the Python enumerations stay in sync with the HiGHS C constants."""
 
-from cyhighs._core import HIGHS_CONSTANTS
-
 import cyhighs
 from cyhighs import ModelStatus, ObjectiveSense, VariableType
+from cyhighs._core import HIGHS_CONSTANTS
 
 
 def test_variable_type_values_match_c_constants():
