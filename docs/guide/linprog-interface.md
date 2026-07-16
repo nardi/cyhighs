@@ -1,15 +1,16 @@
 # linprog interface
 
-[`linprog`][cyhighs.linprog] is a drop in replacement for
-`scipy.optimize.linprog`. It mirrors the SciPy signature and return type, so an
-existing SciPy call keeps working after you change only the import. Each code
-block on this page continues from the one before it.
+[`linprog`][cyhighs.linprog] mirrors `scipy.optimize.linprog`'s signature, so
+an existing SciPy call keeps working after you change only the import and
+adjust how the result is read (see below). Each code block on this page
+continues from the one before it.
 
 ## A first solve
 
 You pass the objective `c`, the inequality matrix `A_ub` with its right hand side
 `b_ub`, and optionally the equality matrix `A_eq` with `b_eq`. Matrices may be
-dense or SciPy sparse. The result is a `scipy.optimize.OptimizeResult`.
+dense or SciPy sparse. The result is an [`OptimizeResult`][cyhighs.OptimizeResult],
+which carries the same field names as SciPy's own `OptimizeResult`.
 
 ```python
 from cyhighs import linprog
@@ -29,7 +30,13 @@ print(result.x, result.fun)
 The result carries the fields SciPy callers expect. `x` is the solution, `fun`
 is the objective value, `slack` is the room left in each inequality, `con` is the
 equality residual, and `status`, `success`, `message`, and `nit` describe the
-outcome.
+outcome. Unlike SciPy's own `OptimizeResult`, there is also a `highs_solution`
+field with the full [`LinearProblemSolution`][cyhighs.LinearProblemSolution]
+HiGHS returned, which carries extra detail such as the presolved problem size:
+
+```{.python continuation}
+print(result.highs_solution.presolved_num_rows, result.highs_solution.presolved_num_columns)
+```
 
 ## Matching SciPy
 

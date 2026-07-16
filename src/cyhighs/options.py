@@ -64,6 +64,46 @@ class HighsOption(Enum):
     """Presolve control. One of "off", "choose" or "on". String, default
     "choose"."""
 
+    USE_IMPLIED_BOUNDS_FROM_PRESOLVE = ("use_implied_bounds_from_presolve", OPTION_KIND_BOOL)
+    """Use relaxed implied bounds from presolve. Boolean, default False."""
+
+    LP_PRESOLVE_REQUIRES_BASIS_POSTSOLVE = (
+        "lp_presolve_requires_basis_postsolve",
+        OPTION_KIND_BOOL,
+    )
+    """Prevents LP presolve steps for which postsolve cannot maintain a basis. Boolean,
+    default True."""
+
+    PRESOLVE_PIVOT_THRESHOLD = ("presolve_pivot_threshold", OPTION_KIND_DOUBLE)
+    """Matrix factorization pivot threshold for substitutions in presolve. Double, default
+    0.01."""
+
+    PRESOLVE_REDUCTION_LIMIT = ("presolve_reduction_limit", OPTION_KIND_INT)
+    """Limit on number of presolve reductions. -1 means no limit. Integer, default -1."""
+
+    RESTART_PRESOLVE_REDUCTION_LIMIT = ("restart_presolve_reduction_limit", OPTION_KIND_INT)
+    """Limit on number of further presolve reductions on restart in the MIP solver. -1 means
+    no limit. Integer, default -1."""
+
+    PRESOLVE_RULE_OFF = ("presolve_rule_off", OPTION_KIND_INT)
+    """Bit mask of presolve rules that are not allowed. Build the mask with
+    [`PresolveRule.mask`][cyhighs.PresolveRule.mask], for example
+    `PresolveRule.mask(PresolveRule.PROBING, PresolveRule.SPARSIFY)`. Integer, default 0
+    (every rule allowed)."""
+
+    PRESOLVE_RULE_TEST = ("presolve_rule_test", OPTION_KIND_INT)
+    """A single [`PresolveRule`][cyhighs.PresolveRule] value to test in isolation.
+    Development and debugging use only. Integer, default 0."""
+
+    PRESOLVE_RULE_LOGGING = ("presolve_rule_logging", OPTION_KIND_BOOL)
+    """Log effectiveness of presolve rules for LP. Boolean, default False."""
+
+    PRESOLVE_REMOVE_SLACKS = ("presolve_remove_slacks", OPTION_KIND_BOOL)
+    """Remove slacks after presolve. Boolean, default False."""
+
+    PRESOLVE_SUBSTITUTION_MAXFILLIN = ("presolve_substitution_maxfillin", OPTION_KIND_INT)
+    """Maximal fillin allowed for substitutions in presolve. Integer, default 10."""
+
     PARALLEL = ("parallel", OPTION_KIND_STRING)
     """Parallelism control. One of "off", "choose" or "on". String, default
     "choose"."""
@@ -111,7 +151,11 @@ class HighsOption(Enum):
     value."""
 
     HIGHS_DEBUG_LEVEL = ("highs_debug_level", OPTION_KIND_INT)
-    """Internal debugging verbosity from 0 to 4. Integer, default 0."""
+    """Internal debugging verbosity from 0 to 3. Integer, default 0."""
+
+    ALLOW_UNBOUNDED_OR_INFEASIBLE = ("allow_unbounded_or_infeasible", OPTION_KIND_BOOL)
+    """Whether `ModelStatus.UNBOUNDED_OR_INFEASIBLE` may be reported when presolve cannot
+    distinguish the two. Boolean, default False."""
 
     RANGING = ("ranging", OPTION_KIND_STRING)
     """Compute cost, bound, RHS and basic solution ranging: "off" or "on". String, default
@@ -152,6 +196,16 @@ class HighsOption(Enum):
     USER_BOUND_SCALE = ("user_bound_scale", OPTION_KIND_INT)
     """Exponent of power-of-two bound scaling for model. Integer, default 0."""
 
+    COST_SCALE_FACTOR = ("cost_scale_factor", OPTION_KIND_INT)
+    """Scaling factor for costs. Integer, default 0."""
+
+    ALLOWED_MATRIX_SCALE_FACTOR = ("allowed_matrix_scale_factor", OPTION_KIND_INT)
+    """Largest power-of-two factor permitted when scaling the constraint matrix. Integer,
+    default 20."""
+
+    ALLOWED_COST_SCALE_FACTOR = ("allowed_cost_scale_factor", OPTION_KIND_INT)
+    """Largest power-of-two factor permitted when scaling the costs. Integer, default 0."""
+
     HIGHS_ANALYSIS_LEVEL = ("highs_analysis_level", OPTION_KIND_INT)
     """Analysis level in HiGHS. Integer, default 0."""
 
@@ -187,14 +241,107 @@ class HighsOption(Enum):
     SIMPLEX_MAX_CONCURRENCY = ("simplex_max_concurrency", OPTION_KIND_INT)
     """Maximum level of concurrency in parallel simplex. Integer, default 8."""
 
+    SIMPLEX_DUALIZE_STRATEGY = ("simplex_dualize_strategy", OPTION_KIND_INT)
+    """Strategy for dualizing before simplex: off / on (-1/1). Integer, default -1."""
+
+    SIMPLEX_PERMUTE_STRATEGY = ("simplex_permute_strategy", OPTION_KIND_INT)
+    """Strategy for permuting before simplex: off / on (-1/1). Integer, default -1."""
+
+    MAX_DUAL_SIMPLEX_CLEANUP_LEVEL = ("max_dual_simplex_cleanup_level", OPTION_KIND_INT)
+    """Max level of dual simplex cleanup. Integer, default 1."""
+
+    MAX_DUAL_SIMPLEX_PHASE1_CLEANUP_LEVEL = (
+        "max_dual_simplex_phase1_cleanup_level",
+        OPTION_KIND_INT,
+    )
+    """Max level of dual simplex phase 1 cleanup. Integer, default 2."""
+
+    SIMPLEX_PRICE_STRATEGY = ("simplex_price_strategy", OPTION_KIND_INT)
+    """Strategy for PRICE in simplex. Integer, default 3."""
+
+    SIMPLEX_UNSCALED_SOLUTION_STRATEGY = ("simplex_unscaled_solution_strategy", OPTION_KIND_INT)
+    """Strategy for solving the unscaled LP in simplex. Integer, default 1."""
+
+    NO_UNNECESSARY_REBUILD_REFACTOR = ("no_unnecessary_rebuild_refactor", OPTION_KIND_BOOL)
+    """No unnecessary refactorization on simplex rebuild. Boolean, default True."""
+
+    REBUILD_REFACTOR_SOLUTION_ERROR_TOLERANCE = (
+        "rebuild_refactor_solution_error_tolerance",
+        OPTION_KIND_DOUBLE,
+    )
+    """Tolerance on solution error when considering refactorization on simplex rebuild.
+    Double, default 1e-8."""
+
+    DUAL_STEEPEST_EDGE_WEIGHT_ERROR_TOLERANCE = (
+        "dual_steepest_edge_weight_error_tolerance",
+        OPTION_KIND_DOUBLE,
+    )
+    """Tolerance on dual steepest edge weight errors. Double, default infinity."""
+
+    DUAL_STEEPEST_EDGE_WEIGHT_LOG_ERROR_THRESHOLD = (
+        "dual_steepest_edge_weight_log_error_threshold",
+        OPTION_KIND_DOUBLE,
+    )
+    """Threshold on dual steepest edge weight errors for the Devex switch. Double, default
+    10."""
+
+    DUAL_SIMPLEX_COST_PERTURBATION_MULTIPLIER = (
+        "dual_simplex_cost_perturbation_multiplier",
+        OPTION_KIND_DOUBLE,
+    )
+    """Dual simplex cost perturbation multiplier. 0 means no perturbation. Double, default
+    1.0."""
+
+    PRIMAL_SIMPLEX_BOUND_PERTURBATION_MULTIPLIER = (
+        "primal_simplex_bound_perturbation_multiplier",
+        OPTION_KIND_DOUBLE,
+    )
+    """Primal simplex bound perturbation multiplier. 0 means no perturbation. Double,
+    default 1.0."""
+
+    DUAL_SIMPLEX_PIVOT_GROWTH_TOLERANCE = (
+        "dual_simplex_pivot_growth_tolerance",
+        OPTION_KIND_DOUBLE,
+    )
+    """Dual simplex pivot growth tolerance. Double, default 1e-9."""
+
+    FACTOR_PIVOT_THRESHOLD = ("factor_pivot_threshold", OPTION_KIND_DOUBLE)
+    """Matrix factorization pivot threshold. Double, default 0.1."""
+
+    FACTOR_PIVOT_TOLERANCE = ("factor_pivot_tolerance", OPTION_KIND_DOUBLE)
+    """Matrix factorization pivot tolerance. Double, default 1e-10."""
+
+    USE_ORIGINAL_HFACTOR_LOGIC = ("use_original_HFactor_logic", OPTION_KIND_BOOL)
+    """Use original HFactor logic for sparse vs hyper-sparse TRANs. Boolean, default True."""
+
+    LESS_INFEASIBLE_DSE_CHECK = ("less_infeasible_DSE_check", OPTION_KIND_BOOL)
+    """Check whether the LP is a candidate for less infeasible dual steepest edge (LiDSE).
+    Boolean, default True."""
+
+    LESS_INFEASIBLE_DSE_CHOOSE_ROW = ("less_infeasible_DSE_choose_row", OPTION_KIND_BOOL)
+    """Use LiDSE if the LP has the right properties. Boolean, default True."""
+
     TIMELESS_LOG = ("timeless_log", OPTION_KIND_BOOL)
     """Suppression of time-based data in logging. Boolean, default False."""
 
     LOG_FILE = ("log_file", OPTION_KIND_STRING)
     """Log file. String, default ""."""
 
+    LOG_DEV_LEVEL = ("log_dev_level", OPTION_KIND_INT)
+    """Output development messages: 0 => none; 1 => info; 2 => detailed; 3 => verbose.
+    Integer, default 0."""
+
+    LOG_GITHASH = ("log_githash", OPTION_KIND_BOOL)
+    """Log the githash. Boolean, default True."""
+
     WRITE_MODEL_TO_FILE = ("write_model_to_file", OPTION_KIND_BOOL)
     """Write the model to a file. Boolean, default False."""
+
+    WRITE_MATRIX_IMAGE = ("write_matrix_image", OPTION_KIND_BOOL)
+    """Write an image of the constraint matrix to a file. Boolean, default False."""
+
+    WRITE_HESSIAN_IMAGE = ("write_hessian_image", OPTION_KIND_BOOL)
+    """Write an image of the Hessian to a file. Boolean, default False."""
 
     WRITE_PRESOLVED_MODEL_TO_FILE = ("write_presolved_model_to_file", OPTION_KIND_BOOL)
     """Write the presolved model to a file. Boolean, default False."""
@@ -242,6 +389,16 @@ class HighsOption(Enum):
     READ_BASIS_FILE = ("read_basis_file", OPTION_KIND_STRING)
     """Read basis file. String, default ""."""
 
+    MPS_PARSER_TYPE_FREE = ("mps_parser_type_free", OPTION_KIND_BOOL)
+    """Use the free format MPS file reader. Boolean, default True."""
+
+    KEEP_N_ROWS = ("keep_n_rows", OPTION_KIND_INT)
+    """For multiple N-rows in MPS files: delete rows / delete entries / keep rows
+    (-1/0/1). Integer, default -1."""
+
+    USE_WARM_START = ("use_warm_start", OPTION_KIND_BOOL)
+    """Use any warm start that is available. Boolean, default True."""
+
     WRITE_MODEL_FILE = ("write_model_file", OPTION_KIND_STRING)
     """Write model file. String, default ""."""
 
@@ -287,6 +444,10 @@ class HighsOption(Enum):
 
     MIP_ROOT_PRESOLVE_ONLY = ("mip_root_presolve_only", OPTION_KIND_BOOL)
     """Whether MIP presolve is only applied at the root node. Boolean, default False."""
+
+    SOLVE_RELAXATION = ("solve_relaxation", OPTION_KIND_BOOL)
+    """Solve the relaxation of discrete model components instead of the discrete model
+    itself. Boolean, default False."""
 
     MIP_LIFTING_FOR_PROBING = ("mip_lifting_for_probing", OPTION_KIND_INT)
     """Level of lifting for probing that is used. Integer, default -1."""
@@ -362,11 +523,29 @@ class HighsOption(Enum):
     IPM_OPTIMALITY_TOLERANCE = ("ipm_optimality_tolerance", OPTION_KIND_DOUBLE)
     """IPM optimality tolerance. Double, default 1e-8."""
 
+    IPX_DUALIZE_STRATEGY = ("ipx_dualize_strategy", OPTION_KIND_INT)
+    """Strategy for dualizing before IPX. Integer, default 2."""
+
     MIP_SEARCH_SIMULATE_CONCURRENCY = ("mip_search_simulate_concurrency", OPTION_KIND_BOOL)
     """Simulate MIP search concurrency on a single thread. Boolean, default False."""
 
     IPM_ITERATION_LIMIT = ("ipm_iteration_limit", OPTION_KIND_INT)
     """Iteration limit for IPM solver. Integer, default a very large value."""
+
+    START_CROSSOVER_TOLERANCE = ("start_crossover_tolerance", OPTION_KIND_DOUBLE)
+    """Tolerance to be satisfied before IPM crossover will start. Double, default 1e-8."""
+
+    RUN_CENTRING = ("run_centring", OPTION_KIND_BOOL)
+    """Perform centring steps to compute the analytic centre before crossover. Boolean,
+    default False."""
+
+    MAX_CENTRING_STEPS = ("max_centring_steps", OPTION_KIND_INT)
+    """Maximum number of steps to use when computing the analytic centre. Integer, default
+    5."""
+
+    CENTRING_RATIO_TOLERANCE = ("centring_ratio_tolerance", OPTION_KIND_DOUBLE)
+    """Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below this tolerance.
+    Double, default 100."""
 
     HIPO_SYSTEM = ("hipo_system", OPTION_KIND_STRING)
     """HiPO Newton system: "choose", "augmented" or "normaleq". String, default "choose"."""

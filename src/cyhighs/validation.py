@@ -263,6 +263,9 @@ def solve_linear_problem(
         row_dual_values,
         row_values,
         iteration_count,
+        presolved_num_columns,
+        presolved_num_rows,
+        presolved_num_nonzeros,
     ) = _core.solve_linear_problem_core(
         int(objective_sense),
         0.0,
@@ -289,4 +292,7 @@ def solve_linear_problem(
         row_dual_values=None if is_mixed_integer else row_dual_values,
         row_values=None if is_mixed_integer else row_values,
         simplex_iteration_count=iteration_count,
+        presolved_num_columns=presolved_num_columns,
+        presolved_num_rows=presolved_num_rows,
+        presolved_num_nonzeros=presolved_num_nonzeros,
     )

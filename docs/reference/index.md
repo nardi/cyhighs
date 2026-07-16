@@ -19,6 +19,8 @@ descriptions are generated from the docstrings in the source.
 
 ::: cyhighs.LinearProblemSolution
 
+::: cyhighs.OptimizeResult
+
 ## Enumerations
 
 ::: cyhighs.ObjectiveSense
@@ -26,6 +28,8 @@ descriptions are generated from the docstrings in the source.
 ::: cyhighs.VariableType
 
 ::: cyhighs.ModelStatus
+
+::: cyhighs.PresolveRule
 
 ## Options
 

@@ -24,6 +24,9 @@ from ._highs_c_api cimport (
     Highs_getIntInfoValue,
     Highs_getModelStatus,
     Highs_getObjectiveValue,
+    Highs_getPresolvedNumCol,
+    Highs_getPresolvedNumNz,
+    Highs_getPresolvedNumRow,
     Highs_getSolution,
     Highs_passLp,
     Highs_passMip,
@@ -263,7 +266,9 @@ def solve_linear_problem_core(
 
     Returns:
         A `(model_status, column_values, objective_value, column_dual_values,
-        row_dual_values, row_values, simplex_iteration_count)` tuple.
+        row_dual_values, row_values, simplex_iteration_count,
+        presolved_num_columns, presolved_num_rows, presolved_num_nonzeros)`
+        tuple.
     """
     cdef HighsInt num_col = column_costs.shape[0]
     cdef HighsInt num_row = row_lower_bounds.shape[0]
@@ -372,6 +377,10 @@ def solve_linear_problem_core(
         # Best effort retrieval of the iteration count for reporting.
         Highs_getIntInfoValue(highs, b"simplex_iteration_count", &iteration_count)
 
+        presolved_num_col = Highs_getPresolvedNumCol(highs)
+        presolved_num_row = Highs_getPresolvedNumRow(highs)
+        presolved_num_nz = Highs_getPresolvedNumNz(highs)
+
         return (
             int(model_status),
             column_values,
@@ -380,6 +389,9 @@ def solve_linear_problem_core(
             row_dual_values,
             row_values,
             int(iteration_count),
+            int(presolved_num_col),
+            int(presolved_num_row),
+            int(presolved_num_nz),
         )
     finally:
         Highs_destroy(highs)

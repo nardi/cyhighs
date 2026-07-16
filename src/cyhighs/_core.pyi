@@ -148,5 +148,7 @@ def solve_linear_problem_core(
 
     Returns:
         A `(model_status, column_values, objective_value, column_dual_values,
-        row_dual_values, row_values, simplex_iteration_count)` tuple.
+        row_dual_values, row_values, simplex_iteration_count,
+        presolved_num_columns, presolved_num_rows, presolved_num_nonzeros)`
+        tuple.
     """

@@ -1,7 +1,7 @@
 """Tests that the Python enumerations stay in sync with the HiGHS C constants."""
 
 import cyhighs
-from cyhighs import ModelStatus, ObjectiveSense, VariableType
+from cyhighs import ModelStatus, ObjectiveSense, PresolveRule, VariableType
 from cyhighs._core import HIGHS_CONSTANTS
 
 
@@ -23,6 +23,12 @@ def test_model_status_has_expected_core_members():
     assert ModelStatus.OPTIMAL == 7
     assert ModelStatus.INFEASIBLE == 8
     assert ModelStatus.UNBOUNDED == 10
+
+
+def test_presolve_rule_mask_combines_bit_positions():
+    assert PresolveRule.mask() == 0
+    assert PresolveRule.mask(PresolveRule.EMPTY_ROW) == 1
+    assert PresolveRule.mask(PresolveRule.PROBING, PresolveRule.SPARSIFY) == (1 << 15) | (1 << 14)
 
 
 def test_version_is_reported():

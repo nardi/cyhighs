@@ -8,22 +8,25 @@ This package exposes three layers, from lowest to highest level.
 - [`solve_linear_problem_sparse`][cyhighs.solve_linear_problem_sparse] is a thin
   wrapper that accepts SciPy sparse constraint matrices instead of unpacked
   component arrays.
-- [`linprog`][cyhighs.linprog] is a drop in replacement for
-  `scipy.optimize.linprog`.
+- [`linprog`][cyhighs.linprog] mirrors the `scipy.optimize.linprog` signature,
+  for code migrating from SciPy.
 
 Problem statuses are returned as the [`ModelStatus`][cyhighs.ModelStatus]
 enumeration, variable integrality is expressed with
 [`VariableType`][cyhighs.VariableType], and solver options are set with the
 [`HighsOption`][cyhighs.HighsOption] enumeration.
+[`PresolveRule`][cyhighs.PresolveRule] names the individual presolve
+reductions addressed by
+[`HighsOption.PRESOLVE_RULE_OFF`][cyhighs.HighsOption.PRESOLVE_RULE_OFF].
 """
 
 from __future__ import annotations
 
 from ._core import highs_infinity, highs_version
-from .enumerations import ModelStatus, ObjectiveSense, VariableType
+from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType
 from .linprog_interface import linprog
 from .options import HighsOption
-from .result import LinearProblemSolution
+from .result import LinearProblemSolution, OptimizeResult
 from .sparse_interface import solve_linear_problem_sparse
 from .validation import HIGHS_INFINITY, solve_linear_problem
 
@@ -33,6 +36,8 @@ __all__ = [
     "LinearProblemSolution",
     "ModelStatus",
     "ObjectiveSense",
+    "OptimizeResult",
+    "PresolveRule",
     "VariableType",
     "highs_infinity",
     "highs_version",

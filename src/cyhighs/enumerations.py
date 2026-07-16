@@ -115,3 +115,94 @@ class ModelStatus(IntEnum):
 
     INTERRUPT = 17
     """The solve was interrupted by the user."""
+
+
+class PresolveRule(IntEnum):
+    """A presolve reduction rule, identified by its bit position.
+
+    Mirrors the `PresolveRuleType` constants from HiGHS 1.15.1. Each member's
+    value is the bit position HiGHS uses for that rule in the
+    [`HighsOption.PRESOLVE_RULE_OFF`][cyhighs.HighsOption.PRESOLVE_RULE_OFF]
+    bitmask and in [`HighsOption.PRESOLVE_RULE_TEST`][cyhighs.HighsOption.PRESOLVE_RULE_TEST].
+    Use [`PresolveRule.mask`][cyhighs.PresolveRule.mask] to combine rules into
+    a bitmask rather than shifting bits by hand, for example:
+
+    ```python
+    {HighsOption.PRESOLVE_RULE_OFF: PresolveRule.mask(PresolveRule.PROBING, PresolveRule.SPARSIFY)}
+    ```
+
+    `EMPTY_ROW` through `DOMINATED_COL` are always active in HiGHS and cannot
+    actually be turned off through the bitmask, only `FORCING_ROW` onward can.
+    """
+
+    EMPTY_ROW = 0
+    """Remove rows with no nonzero coefficients."""
+
+    SINGLETON_ROW = 1
+    """Remove rows with a single nonzero coefficient by bounding the column."""
+
+    REDUNDANT_ROW = 2
+    """Remove rows implied by the bounds of their columns."""
+
+    EMPTY_COL = 3
+    """Remove columns with no nonzero coefficients by fixing them."""
+
+    FIXED_COL = 4
+    """Substitute out columns whose bounds force a single value."""
+
+    DOMINATED_COL = 5
+    """Fix columns whose cost and bounds mean one bound is always optimal."""
+
+    FORCING_ROW = 6
+    """Remove rows whose bounds force every column in the row to a bound."""
+
+    FORCING_COL = 7
+    """Remove columns whose bounds force every row containing them."""
+
+    FREE_COL_SUBSTITUTION = 8
+    """Substitute out free columns using a row they appear in."""
+
+    DOUBLETON_EQUATION = 9
+    """Substitute out one column of an equation with exactly two columns."""
+
+    DEPENDENT_EQUATIONS = 10
+    """Remove equations that are linearly dependent on other equations."""
+
+    DEPENDENT_FREE_COLS = 11
+    """Remove free columns that are linearly dependent on other columns."""
+
+    AGGREGATOR = 12
+    """Substitute out columns by aggregating rows."""
+
+    PARALLEL_ROWS_AND_COLS = 13
+    """Merge rows or columns that are parallel to one another."""
+
+    SPARSIFY = 14
+    """Reduce fill-in by combining rows to cancel out matrix entries."""
+
+    PROBING = 15
+    """Fix binary variables whose value can be deduced by probing."""
+
+    ENUMERATION = 16
+    """Solve small independent components of the model by enumeration."""
+
+    DUAL_FIXING = 17
+    """Fix columns whose reduced cost sign forces them to a bound."""
+
+    COL_STUFFING = 18
+    """Fix columns to their best bound when doing so cannot cause infeasibility."""
+
+    INITIAL_SWEEP = 19
+    """The initial sweep that removes empty rows and columns."""
+
+    @classmethod
+    def mask(cls, *rules: PresolveRule) -> int:
+        """Combine rules into the bitmask `presolve_rule_off` expects.
+
+        For example, `PresolveRule.mask(PresolveRule.PROBING,
+        PresolveRule.SPARSIFY)` disables just those two rules.
+        """
+        result = 0
+        for rule in rules:
+            result |= 1 << rule
+        return result

@@ -1,10 +1,11 @@
-"""A drop in replacement for `scipy.optimize.linprog`.
+"""A near drop in replacement for `scipy.optimize.linprog`.
 
-This wrapper mirrors the SciPy `linprog` signature and return type so that it
-can be used in place of SciPy in existing code. It accepts dense or sparse
+This wrapper mirrors the SciPy `linprog` signature. It accepts dense or sparse
 constraint matrices, translates the SciPy bounds and integrality conventions,
-solves through HiGHS, and returns a `scipy.optimize.OptimizeResult` populated
-with the fields SciPy callers expect.
+solves through HiGHS, and returns an [`OptimizeResult`][cyhighs.OptimizeResult]
+carrying the same field names SciPy callers expect (`x`, `fun`, `slack`, `con`,
+`status`, `success`, `message`, `nit`) plus a `highs_solution` field with the
+full HiGHS solve result.
 
 The signature adds nothing beyond SciPy except that the standard `x0` argument
 is wired to the HiGHS warm start, so an initial solution is actually used.
@@ -15,6 +16,7 @@ from __future__ import annotations
 import numpy as np
 
 from .enumerations import ModelStatus
+from .result import OptimizeResult
 from .sparse_interface import solve_linear_problem_sparse
 
 # Translation from HiGHS model status to the integer status codes SciPy linprog
@@ -157,11 +159,10 @@ def linprog(
             [`HighsOption`][cyhighs.HighsOption] to a value.
 
     Returns:
-        A `scipy.optimize.OptimizeResult` with `x`, `fun`, `slack`, `con`,
-        `status`, `success`, `message` and `nit` fields.
+        An [`OptimizeResult`][cyhighs.OptimizeResult] with `x`, `fun`, `slack`,
+        `con`, `status`, `success`, `message`, `nit` and `highs_solution`
+        fields.
     """
-    from scipy.optimize import OptimizeResult
-
     objective_coefficients = np.ascontiguousarray(c, dtype=np.float64)
     number_of_columns = objective_coefficients.shape[0]
 
@@ -212,4 +213,5 @@ def linprog(
         success=scipy_status == 0,
         message=_SCIPY_MESSAGE_BY_STATUS[scipy_status],
         nit=solution.simplex_iteration_count,
+        highs_solution=solution,
     )
