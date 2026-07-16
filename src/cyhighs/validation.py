@@ -18,13 +18,19 @@ import numpy as np
 
 from . import _core
 from .enumerations import ModelStatus, ObjectiveSense
-from .options import build_option_settings
+from .options import HighsOption, build_option_settings
 from .result import LinearProblemSolution
 
 # The value HiGHS uses for infinity. Any bound at or beyond this magnitude is
 # treated as unbounded. Queried once from the linked library so that it always
 # matches the compiled solver.
 HIGHS_INFINITY: float = _core.highs_infinity()
+
+# HiGHS itself defaults output_flag to True and prints its solver log to
+# stdout. cyhighs instead defaults to silent, matching the convention of other
+# Python solver wrappers (for example SciPy's own disp=False default), and lets
+# an explicit OUTPUT_FLAG in options override it either way.
+_DEFAULT_OPTIONS = {HighsOption.OUTPUT_FLAG: False}
 
 
 def _as_float64_array(array, name: str) -> np.ndarray:
@@ -171,7 +177,9 @@ def solve_linear_problem(
         initial_column_values: A warm start solution for the variables.
         objective_sense: Whether to minimize (default) or maximize the objective.
         options: Solver options as a mapping from
-            [`HighsOption`][cyhighs.HighsOption] to a value.
+            [`HighsOption`][cyhighs.HighsOption] to a value. Unlike raw HiGHS,
+            [`HighsOption.OUTPUT_FLAG`][cyhighs.HighsOption] defaults to `False`
+            here, so the solver is silent unless it is explicitly set.
 
     Returns:
         The [`LinearProblemSolution`][cyhighs.LinearProblemSolution] record.
@@ -245,7 +253,7 @@ def solve_linear_problem(
         if warm_start_array.shape[0] != number_of_columns:
             raise ValueError(f"initial_column_values must have length {number_of_columns}")
 
-    option_settings = build_option_settings(options)
+    option_settings = build_option_settings({**_DEFAULT_OPTIONS, **(options or {})})
 
     (
         raw_status,

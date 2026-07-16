@@ -122,7 +122,8 @@ assert solution.row_values is None
 ## Solver options
 
 Options are supplied as a mapping from [`HighsOption`][cyhighs.HighsOption] to a
-value. A common one is to silence the solver log.
+value. Unlike raw HiGHS, the solver log is off by default here; pass
+`HighsOption.OUTPUT_FLAG: True` if you want to see it.
 
 ```{.python continuation}
 from cyhighs import HighsOption
@@ -131,7 +132,7 @@ solution = solve_linear_problem(
     objective_coefficients=np.array([-1.0, -2.0]),
     variable_lower_bounds=np.array([0.0, 0.0]),
     variable_upper_bounds=np.array([4.0, 2.0]),
-    options={HighsOption.OUTPUT_FLAG: False, HighsOption.TIME_LIMIT: 30.0},
+    options={HighsOption.TIME_LIMIT: 30.0},
 )
 
 # With no constraints, each variable goes to the bound that helps the objective.
