@@ -132,7 +132,7 @@ class PresolveRule(IntEnum):
     ```
 
     `EMPTY_ROW` through `DOMINATED_COL` are always active in HiGHS and cannot
-    actually be turned off through the bitmask; only `FORCING_ROW` onward can.
+    actually be turned off through the bitmask, only `FORCING_ROW` onward can.
     """
 
     EMPTY_ROW = 0

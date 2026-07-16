@@ -6,9 +6,9 @@ actually passed to a solve, and the [API reference][cyhighs.HighsOption] for
 each option's full description, type and default.
 
 HiGHS itself splits its options into two tiers. **Basic** options are the ones
-most users need day to day. **Advanced** options tune solver internals -
+most users need day to day. **Advanced** options tune solver internals:
 numerical tolerances, algorithm strategy selection, and similar knobs. They
-are safe to set, but rarely necessary; if you are not sure whether you need
+are safe to set, but rarely necessary. If you are not sure whether you need
 one, you probably do not. This page indexes every option, grouped by topic and
 then by tier, as a map into the reference.
 
