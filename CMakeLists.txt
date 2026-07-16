@@ -16,7 +16,7 @@
 #     wheels.
 #
 # Either way the result is a single self contained extension module.
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.28)
 
 project(cyhighs LANGUAGES C CXX)
 
@@ -84,11 +84,16 @@ if(CYHIGHS_HIGHS_FROM_SOURCE)
   set(HIPO ON CACHE BOOL "" FORCE)
   set(BUILD_SHARED_EXTRAS_LIB OFF CACHE BOOL "" FORCE)
 
+  # EXCLUDE_FROM_ALL keeps HiGHS's own install() rules (its static libs, the
+  # standalone highs CLI binary, headers, and CMake package config) out of our
+  # wheel. Without it, cmake --install would copy all of that in alongside
+  # _core.so even though nothing in cyhighs needs it at runtime.
   FetchContent_Declare(
     highs
     GIT_REPOSITORY https://github.com/ERGO-Code/HiGHS.git
     GIT_TAG v${HIGHS_VERSION}
-    GIT_SHALLOW ON)
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL)
   FetchContent_MakeAvailable(highs)
 
   # The C API header lives in the highs/interfaces directory of the source tree.

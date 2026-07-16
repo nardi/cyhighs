@@ -6,7 +6,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "cython>=3.0",
-    "cmake>=3.24",
+    "cmake>=3.28",
     "ninja>=1.11",
 ]
 build-backend = "scikit_build_core.build"
@@ -62,7 +62,7 @@ wheel.packages = ["src/cyhighs"]
 minimum-version = "0.10"
 
 [tool.scikit-build.cmake]
-version = ">=3.24"
+version = ">=3.28"
 build-type = "Release"
 
 [tool.pytest.ini_options]
