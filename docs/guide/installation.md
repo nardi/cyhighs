@@ -15,10 +15,14 @@ which pip installs for you.
 
 Wheels are published for CPython 3.11 through 3.14 on:
 
-- **Linux** x86_64 and aarch64 — built against a recent glibc, so they require
-  **glibc 2.38 or newer** (for example Ubuntu 24.04+, Debian 13+, Fedora 39+).
-  Older distributions and musl-based distributions (such as Alpine) are not
-  covered by a wheel and need a source build.
+- **Linux** x86_64 and aarch64. Two flavours are shipped and pip picks the best
+  match automatically:
+    - `manylinux_2_28` (glibc 2.28 or newer, for example CentOS/RHEL 8, Debian
+      10+, Ubuntu 18.10+) and `musllinux_1_2` (Alpine and other musl distros),
+      built by compiling HiGHS from source in the manylinux/musllinux containers.
+    - `manylinux_2_39` (glibc 2.39 or newer, for example Ubuntu 24.04+), built
+      from the official prebuilt HiGHS archive. On new-enough systems pip prefers
+      this one.
 - **macOS** on Apple Silicon (arm64).
 - **Windows** on x86_64.
 
@@ -44,10 +48,21 @@ for a platform without a published wheel, you need a C and C++ compiler. CMake
 and Ninja are pulled in automatically as build dependencies, so you do not have
 to install them yourself.
 
-Rather than compiling HiGHS, the build downloads the official prebuilt HiGHS
-release archive for your platform and links it in, so it is quick and needs
-network access at build time. Because the prebuilt Linux archive targets a
-recent glibc, a source build on Linux also requires **glibc 2.38 or newer**.
+By default, rather than compiling HiGHS, the build downloads the official
+prebuilt HiGHS release archive for your platform and links it in, so it is quick
+and needs network access at build time. Because the prebuilt Linux archive
+targets a recent glibc, this default source build on Linux also requires
+**glibc 2.38 or newer**.
+
+To instead compile HiGHS itself from source — needed on older glibc or on musl,
+and how the `manylinux_2_28` / `musllinux` wheels are produced — pass
+`-DCYHIGHS_HIGHS_FROM_SOURCE=ON`. That path links a prebuilt OpenBLAS that must
+already be installed (for example `openblas-devel` on RHEL/Fedora,
+`libopenblas-dev` on Debian/Ubuntu, or `openblas-dev` on Alpine):
+
+```bash
+pip wheel . -C cmake.define.CYHIGHS_HIGHS_FROM_SOURCE=ON
+```
 
 The project uses [uv](https://docs.astral.sh/uv/) for development. Cloning the
 repository and running a sync builds the extension.

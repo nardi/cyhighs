@@ -66,6 +66,60 @@ jobs:
           name: wheels-linux-${{ matrix.os }}-cp${{ matrix.python }}
           path: ./wheelhouse/*.whl
 
+  # Portable Linux wheels built from source inside cibuildwheel's default
+  # containers, which are manylinux_2_28 (x86_64/aarch64) and musllinux_1_2.
+  # Compiling HiGHS in the container links against the container glibc/musl, so
+  # these wheels carry the portable manylinux_2_28 / musllinux tags that the
+  # prebuilt-archive job above (glibc >= 2.38) cannot produce. A prebuilt
+  # OpenBLAS is installed into the container so only the HiGHS solver and HiPO
+  # are compiled from source.
+  build_linux_source:
+    name: Linux source ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04       # x86_64 -> manylinux_2_28 + musllinux_1_2
+          - ubuntu-24.04-arm   # aarch64 -> manylinux_2_28 + musllinux_1_2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.2.0
+        env:
+          # Build CPython 3.11 through 3.14. The free threaded builds are left
+          # out for now while Cython support for them is still settling.
+          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
+          # Skip 32-bit targets. HiGHS is not viable on 32-bit and there are no
+          # 32-bit SciPy wheels for the test step.
+          CIBW_SKIP: "*_i686"
+          # Install a prebuilt OpenBLAS so only the HiGHS solver and HiPO are
+          # compiled from source. manylinux_2_28 is AlmaLinux 8 (dnf, with
+          # openblas-devel from EPEL); musllinux_1_2 is Alpine (apk, openblas-dev
+          # from the community repo). One command covers both container types.
+          CIBW_BEFORE_ALL: >-
+            if command -v dnf; then dnf install -y epel-release && dnf install -y openblas-devel;
+            elif command -v yum; then yum install -y epel-release && yum install -y openblas-devel;
+            elif command -v apk; then apk add --no-cache openblas-dev;
+            fi
+          # Build HiGHS from source (linking the prebuilt OpenBLAS above).
+          # scikit-build-core forwards CMAKE_ARGS to the cmake configure step.
+          CIBW_ENVIRONMENT: 'CMAKE_ARGS="-DCYHIGHS_HIGHS_FROM_SOURCE=ON"'
+          # Verify each freshly built wheel by running the test suite against it.
+          CIBW_TEST_REQUIRES: "pytest scipy pytest-markdown-docs"
+          CIBW_TEST_COMMAND: "pytest {project}/tests {project}/docs"
+          # scipy does not publish musllinux wheels for every CPython yet, so the
+          # in-container test install can fail there. The wheels are still built;
+          # drop this once scipy musllinux coverage is confirmed for all targets.
+          CIBW_TEST_SKIP: "*-musllinux_*"
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-source-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
   # macOS and Windows wheels are built with cibuildwheel, which handles the
   # per-Python builds and the delocate/delvewheel repair. glibc is not a concern
   # on these platforms, so the prebuilt archives build in the standard images.
@@ -122,7 +176,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build_linux, build_wheels, build_sdist]
+    needs: [build_linux, build_linux_source, build_wheels, build_sdist]
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     environment:

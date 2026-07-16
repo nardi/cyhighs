@@ -11,13 +11,20 @@ sync.
 
 The build is driven by
 [scikit-build-core](https://scikit-build-core.readthedocs.io/), which runs a
-CMake build behind the standard Python packaging interface. Instead of compiling
-HiGHS from source, CMake downloads the official prebuilt **`static-apache`**
-release archive for the target platform at a pinned version, currently 1.15.1,
-verifies it against a pinned checksum, extracts it, and links the static
-libraries it ships directly into the extension. Because the version is pinned,
-every wheel is built against a known solver, and the Python enumerations in
-`cyhighs` are transcribed from that same release.
+CMake build behind the standard Python packaging interface. By default, instead
+of compiling HiGHS from source, CMake downloads the official prebuilt
+**`static-apache`** release archive for the target platform at a pinned version,
+currently 1.15.1, verifies it against a pinned checksum, extracts it, and links
+the static libraries it ships directly into the extension. Because the version
+is pinned, every wheel is built against a known solver, and the Python
+enumerations in `cyhighs` are transcribed from that same release.
+
+The one exception is the portable Linux wheels (`manylinux_2_28` and
+`musllinux_1_2`). The prebuilt archive is built against a recent glibc and
+cannot link inside the older manylinux/musllinux build containers, so for those
+wheels CMake compiles HiGHS and HiPO from source at the same pinned version
+(`-DCYHIGHS_HIGHS_FROM_SOURCE=ON`), linking a prebuilt OpenBLAS installed in the
+container. The result is the same statically bundled solver, just built in place.
 
 The `static-apache` archive already contains the HiPO interior point solver and
 its bundled OpenBLAS linear algebra kernels, so the wheels carry their own linear
@@ -29,11 +36,12 @@ surface small and the dependency on NumPy loose.
 
 ## Platform coverage
 
-Prebuilt HiGHS archives exist for a fixed set of platforms, and the wheels
-follow them: Linux x86_64 and aarch64 (glibc), macOS on Apple Silicon, and
-Windows on x86_64. The Linux archives are built against a recent glibc, so the
-Linux wheels require **glibc 2.38 or newer**. There are no musl (Alpine) or
-32-bit wheels; those platforms build from source instead.
+Wheels are published for Linux x86_64 and aarch64, macOS on Apple Silicon, and
+Windows on x86_64. On Linux both a `manylinux_2_39` wheel (from the prebuilt
+archive, requiring **glibc 2.39 or newer**) and the more portable
+`manylinux_2_28` (**glibc 2.28 or newer**) and `musllinux_1_2` (Alpine and other
+musl distros) wheels are shipped; pip installs whichever best matches the host.
+There are no 32-bit wheels; that platform builds from source instead.
 
 ## Licensing
 
