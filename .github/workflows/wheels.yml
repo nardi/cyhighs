@@ -49,8 +49,10 @@ jobs:
           # C++17 standard library features HiGHS relies on.
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-13' && '10.15' || '11.0' }}
           # Verify each freshly built wheel by running the test suite against it.
-          CIBW_TEST_REQUIRES: "pytest scipy"
-          CIBW_TEST_COMMAND: "pytest {project}/tests"
+          # pytest-markdown-docs is required because the project addopts enable it,
+          # and it lets the documentation examples run against the built wheel too.
+          CIBW_TEST_REQUIRES: "pytest scipy pytest-markdown-docs"
+          CIBW_TEST_COMMAND: "pytest {project}/tests {project}/docs"
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
