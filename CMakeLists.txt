@@ -38,8 +38,12 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ZLIB OFF CACHE BOOL "" FORCE)
 
 # HiPO is the interior point solver added in HiGHS 1.15. It requires FAST_BUILD
-# and its own OpenBLAS build. NO_AVX512 keeps the OpenBLAS kernels portable
-# across the range of CPUs that the prebuilt wheels will run on.
+# and its own OpenBLAS build. NO_AVX512 and NO_AVX2 keep the OpenBLAS kernels
+# portable across the range of CPUs that the prebuilt wheels will run on.
+# NO_AVX2 also works around a manylinux GCC 14 compile failure: its AVX2/FMA
+# kernels fail with "inlining failed in call to 'always_inline'
+# '_mm256_fmadd_ps': target specific option mismatch" when OpenBLAS's x86_64
+# generic kernel is built under that compiler.
 #
 # BUILD_SHARED_EXTRAS_LIB must be OFF. HiGHS places the HiPO numerical
 # dependencies (AMD, BLAS, METIS, RCM) in a separate highs_extras library. When
@@ -50,6 +54,7 @@ set(ZLIB OFF CACHE BOOL "" FORCE)
 set(HIPO ON CACHE BOOL "" FORCE)
 set(BUILD_OPENBLAS ON CACHE BOOL "" FORCE)
 set(NO_AVX512 ON CACHE BOOL "" FORCE)
+set(NO_AVX2 ON CACHE BOOL "" FORCE)
 set(BUILD_SHARED_EXTRAS_LIB OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
