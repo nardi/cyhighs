@@ -107,7 +107,7 @@ endif()
 # which depends on OpenBLAS. Match both the Unix (lib*.a) and Windows (*.lib)
 # naming so the same logic works everywhere.
 set(_highs_libraries "")
-foreach(_name highs highs_extras openblas)
+foreach(_name highs highs_extras)
   file(GLOB _found
     "${_highs_root}/lib/lib${_name}.a"
     "${_highs_root}/lib/${_name}.lib"
@@ -118,6 +118,24 @@ foreach(_name highs highs_extras openblas)
   list(GET _found 0 _lib)
   list(APPEND _highs_libraries "${_lib}")
 endforeach()
+
+# The OpenBLAS static library can carry a target or version suffix (for example
+# libopenblas_generic-r0.3.30.a on macOS) rather than the plain libopenblas.a
+# seen on Linux, so match it with a wildcard. The exact name is listed first so
+# it wins when present.
+file(GLOB _openblas_found
+  "${_highs_root}/lib/libopenblas.a"
+  "${_highs_root}/lib/libopenblas*.a"
+  "${_highs_root}/lib/openblas.lib"
+  "${_highs_root}/lib/openblas*.lib"
+  "${_highs_root}/lib/libopenblas*.lib")
+if(NOT _openblas_found)
+  file(GLOB _lib_contents "${_highs_root}/lib/*")
+  message(FATAL_ERROR
+    "Prebuilt OpenBLAS library not found in ${_highs_root}/lib. Contents: ${_lib_contents}")
+endif()
+list(GET _openblas_found 0 _lib)
+list(APPEND _highs_libraries "${_lib}")
 
 # ---------------------------------------------------------------------------
 # Transpile the Cython source to C.
