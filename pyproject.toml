@@ -13,7 +13,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "cyhighs"
-version = "0.1.2"
+version = "0.2.0"
 description = "Cython bindings to the HiGHS linear and mixed integer optimization solver"
 readme = "README.md"
 requires-python = ">=3.11"
