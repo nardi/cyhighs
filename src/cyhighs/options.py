@@ -47,8 +47,10 @@ class HighsOption(Enum):
     """
 
     OUTPUT_FLAG = ("output_flag", OPTION_KIND_BOOL)
-    """Master switch for all HiGHS logging. Set to False to silence the solver.
-    Boolean, default True."""
+    """Master switch for all HiGHS logging. Set to True to let the solver print
+    its log. Boolean; HiGHS itself defaults to True, but
+    [`solve_linear_problem`][cyhighs.solve_linear_problem] defaults it to False
+    so the solver is silent unless requested."""
 
     LOG_TO_CONSOLE = ("log_to_console", OPTION_KIND_BOOL)
     """Whether log messages are written to the console. Boolean, default True."""
