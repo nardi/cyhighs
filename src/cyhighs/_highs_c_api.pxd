@@ -88,6 +88,9 @@ cdef extern from "interfaces/highs_c_api.h" nogil:
     )
     double Highs_getObjectiveValue(const void* highs)
     HighsInt Highs_getIntInfoValue(const void* highs, const char* info, HighsInt* value)
+    HighsInt Highs_getPresolvedNumCol(const void* highs)
+    HighsInt Highs_getPresolvedNumRow(const void* highs)
+    HighsInt Highs_getPresolvedNumNz(const void* highs)
 
     # ----- Miscellaneous -----
     double Highs_getInfinity(const void* highs)

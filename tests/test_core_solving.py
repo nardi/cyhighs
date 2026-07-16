@@ -13,6 +13,7 @@ from cyhighs import (
     HighsOption,
     ModelStatus,
     ObjectiveSense,
+    PresolveRule,
     VariableType,
     solve_linear_problem,
 )
@@ -198,6 +199,51 @@ def test_options_are_applied():
         options={HighsOption.OUTPUT_FLAG: False, HighsOption.TIME_LIMIT: 30.0},
     )
     assert solution.model_status == ModelStatus.OPTIMAL
+
+
+def test_advanced_options_are_applied():
+    # A grab bag of newly exposed advanced options, spanning presolve, simplex
+    # and IPM internals. The solve should still work, which is the smoke test
+    # for the option name strings being correct.
+    values, row_indices, column_pointers, row_lower, row_upper = _classic_two_variable_program()
+    solution = solve_linear_problem(
+        objective_coefficients=np.array([-1.0, -2.0]),
+        constraint_matrix_values=values,
+        constraint_matrix_row_indices=row_indices,
+        constraint_matrix_column_pointers=column_pointers,
+        constraint_lower_bounds=row_lower,
+        constraint_upper_bounds=row_upper,
+        variable_lower_bounds=np.array([0.0, 0.0]),
+        variable_upper_bounds=np.array([np.inf, np.inf]),
+        options={
+            HighsOption.OUTPUT_FLAG: False,
+            HighsOption.PRESOLVE_RULE_OFF: PresolveRule.mask(
+                PresolveRule.PROBING, PresolveRule.SPARSIFY
+            ),
+            HighsOption.PRESOLVE_SUBSTITUTION_MAXFILLIN: 5,
+            HighsOption.SIMPLEX_PRICE_STRATEGY: 3,
+            HighsOption.START_CROSSOVER_TOLERANCE: 1e-7,
+        },
+    )
+    assert solution.model_status == ModelStatus.OPTIMAL
+
+
+def test_presolved_problem_size_is_reported():
+    values, row_indices, column_pointers, row_lower, row_upper = _classic_two_variable_program()
+    solution = solve_linear_problem(
+        objective_coefficients=np.array([-1.0, -2.0]),
+        constraint_matrix_values=values,
+        constraint_matrix_row_indices=row_indices,
+        constraint_matrix_column_pointers=column_pointers,
+        constraint_lower_bounds=row_lower,
+        constraint_upper_bounds=row_upper,
+        variable_lower_bounds=np.array([0.0, 0.0]),
+        variable_upper_bounds=np.array([np.inf, np.inf]),
+        options={HighsOption.OUTPUT_FLAG: False},
+    )
+    assert 0 <= solution.presolved_num_columns <= 2
+    assert 0 <= solution.presolved_num_rows <= 2
+    assert solution.presolved_num_nonzeros >= 0
 
 
 def test_hipo_solver_option_solves_linear_program():

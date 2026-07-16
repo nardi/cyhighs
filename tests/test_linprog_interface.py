@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from scipy.optimize import linprog as scipy_linprog
 
-from cyhighs import linprog
+from cyhighs import LinearProblemSolution, linprog
 
 
 def test_matches_scipy_on_a_small_problem():
@@ -39,6 +39,18 @@ def test_returns_optimize_result_fields():
     # slack is b_ub - A_ub @ x and should be nonnegative at optimum.
     assert np.all(result.slack >= -1e-6)
     assert result.con.size == 0
+
+
+def test_highs_solution_field_carries_full_result():
+    result = linprog(
+        c=[-1.0, -2.0],
+        A_ub=[[1.0, 1.0], [1.0, 3.0]],
+        b_ub=[4.0, 6.0],
+        bounds=(0, None),
+    )
+    assert isinstance(result.highs_solution, LinearProblemSolution)
+    assert 0 <= result.highs_solution.presolved_num_columns <= 2
+    assert 0 <= result.highs_solution.presolved_num_rows <= 2
 
 
 def test_equality_constraints_produce_zero_residual():

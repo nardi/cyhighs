@@ -20,6 +20,7 @@ nav = [
     { "What is cyhighs" = "guide/what-is-cyhighs.md" },
     { "How HiGHS is bundled" = "guide/bundling.md" },
     { "Installation" = "guide/installation.md" },
+    { "Options" = "guide/options.md" },
     { "Solver interfaces" = [
       { "Array interface" = "guide/array-interface.md" },
       { "Sparse interface" = "guide/sparse-interface.md" },
