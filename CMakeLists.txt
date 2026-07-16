@@ -119,23 +119,27 @@ foreach(_name highs highs_extras)
   list(APPEND _highs_libraries "${_lib}")
 endforeach()
 
-# The OpenBLAS static library can carry a target or version suffix (for example
-# libopenblas_generic-r0.3.30.a on macOS) rather than the plain libopenblas.a
-# seen on Linux, so match it with a wildcard. The exact name is listed first so
-# it wins when present.
+# HiPO needs a BLAS. The Linux and Windows archives bundle OpenBLAS as a static
+# library (its name may carry a target or version suffix, so match with a
+# wildcard). The macOS archive ships no OpenBLAS and instead relies on the system
+# Accelerate framework, so fall back to that there.
 file(GLOB _openblas_found
   "${_highs_root}/lib/libopenblas.a"
   "${_highs_root}/lib/libopenblas*.a"
   "${_highs_root}/lib/openblas.lib"
   "${_highs_root}/lib/openblas*.lib"
   "${_highs_root}/lib/libopenblas*.lib")
-if(NOT _openblas_found)
+if(_openblas_found)
+  list(GET _openblas_found 0 _lib)
+  list(APPEND _highs_libraries "${_lib}")
+elseif(APPLE)
+  find_library(_accelerate Accelerate REQUIRED)
+  list(APPEND _highs_libraries "${_accelerate}")
+else()
   file(GLOB _lib_contents "${_highs_root}/lib/*")
   message(FATAL_ERROR
-    "Prebuilt OpenBLAS library not found in ${_highs_root}/lib. Contents: ${_lib_contents}")
+    "No BLAS library found in ${_highs_root}/lib. Contents: ${_lib_contents}")
 endif()
-list(GET _openblas_found 0 _lib)
-list(APPEND _highs_libraries "${_lib}")
 
 # ---------------------------------------------------------------------------
 # Transpile the Cython source to C.
