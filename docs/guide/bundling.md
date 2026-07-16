@@ -11,50 +11,77 @@ sync.
 
 The build is driven by
 [scikit-build-core](https://scikit-build-core.readthedocs.io/), which runs a
-CMake build behind the standard Python packaging interface. By default, instead
-of compiling HiGHS from source, CMake downloads the official prebuilt
-**`static-apache`** release archive for the target platform at a pinned version,
-currently 1.15.1, verifies it against a pinned checksum, extracts it, and links
-the static libraries it ships directly into the extension. Because the version
-is pinned, every wheel is built against a known solver, and the Python
-enumerations in `cyhighs` are transcribed from that same release.
+CMake build behind the standard Python packaging interface. CMake compiles
+HiGHS and HiPO from source (via `FetchContent`) at a pinned version, currently
+1.15.1, on every platform. Because the version is pinned, every wheel is built
+against a known solver, and the Python enumerations in `cyhighs` are
+transcribed from that same release.
 
-The one exception is the portable Linux wheels (`manylinux_2_28` and
-`musllinux_1_2`). The prebuilt archive is built against a recent glibc and
-cannot link inside the older manylinux/musllinux build containers, so for those
-wheels CMake compiles HiGHS and HiPO from source at the same pinned version
-(`-DCYHIGHS_HIGHS_FROM_SOURCE=ON`), linking a prebuilt OpenBLAS installed in the
-container. The result is the same statically bundled solver, just built in place.
+The Cython source is transpiled to C and compiled against the HiGHS headers.
+The binding deliberately avoids the NumPy C API. It moves array data across the
+boundary using typed memoryviews and the buffer protocol only, which keeps the
+compiled surface small and the dependency on NumPy loose.
 
-The `static-apache` archive already contains the HiPO interior point solver and
-its bundled OpenBLAS linear algebra kernels, so the wheels carry their own linear
-algebra and still need nothing from the host system. The Cython source is
-transpiled to C and compiled against the prebuilt HiGHS headers. The binding
-deliberately avoids the NumPy C API. It moves array data across the boundary
-using typed memoryviews and the buffer protocol only, which keeps the compiled
-surface small and the dependency on NumPy loose.
+## The BLAS backend: libblastrampoline
+
+HiPO, HiGHS's interior-point solver, needs a BLAS/LAPACK implementation. On
+Linux and Windows, instead of linking one directly, `cyhighs` links HiGHS
+against
+[libblastrampoline](https://github.com/JuliaLinearAlgebra/libblastrampoline)
+(lbt). This is a small shared library, originally built for the Julia
+ecosystem, that implements the standard BLAS/LAPACK ABI and forwards every
+call, at runtime, to whichever real implementation is named by the
+`LBT_DEFAULT_LIBS` environment variable. `cyhighs`'s own `__init__.py` sets
+that variable before the compiled extension is imported:
+
+- by default, to a prebuilt OpenBLAS bundled inside the wheel, so installing
+  `cyhighs` still gives you a fully working solver with no configuration and no
+  external dependencies
+- to Intel MKL instead, if the optional `cyhighs[mkl]` extra is installed and
+  MKL's runtime library can be found
+
+Because the switch happens at import time rather than at compile time, going
+from the bundled OpenBLAS to MKL (or back) never requires reinstalling
+`cyhighs`. If `LBT_DEFAULT_LIBS` is already set in your environment when
+`cyhighs` is imported, it is left untouched, so you can also point HiGHS at any
+other lbt-compatible BLAS build yourself.
+
+CMake never compiles OpenBLAS itself. Both lbt and the bundled OpenBLAS are
+fetched as prebuilt binaries and verified against pinned checksums, the same
+way the HiGHS source is fetched at a pinned version. lbt comes from
+JuliaBinaryWrappers' releases on every platform. The bundled OpenBLAS comes
+from conda-forge, except on the portable `musllinux_1_2` (Alpine) Linux
+wheels, where conda-forge has no build to offer and Alpine's own OpenBLAS
+package is used instead.
+
+On macOS, none of this applies. HiGHS links directly against Apple's
+Accelerate framework there, which ships with every macOS system, so lbt has
+nothing to forward and the `cyhighs[mkl]` extra has no effect (Intel has also
+never published MKL for macOS anyway).
 
 ## Platform coverage
 
 Wheels are published for Linux x86_64 and aarch64, macOS on Apple Silicon, and
-Windows on x86_64. On Linux both a `manylinux_2_39` wheel (from the prebuilt
-archive, requiring **glibc 2.39 or newer**) and the more portable
-`manylinux_2_28` (**glibc 2.28 or newer**) and `musllinux_1_2` (Alpine and other
-musl distros) wheels are shipped; pip installs whichever best matches the host.
-There are no 32-bit wheels; that platform builds from source instead.
+Windows on x86_64. There are no 32-bit wheels, since HiGHS is not viable on
+32-bit targets. The `cyhighs[mkl]` extra is only available on Linux x86_64 and
+Windows x86_64, since Intel does not publish MKL for macOS or for any ARM
+target.
 
 ## Licensing
 
 Because the bundled build includes HiPO, which carries Apache-licensed
-dependencies, the `static-apache` archive is distributed under the Apache License
-2.0, and `cyhighs` is released under the same license. The upstream HiGHS license
-and notices are included in the wheels for attribution.
+dependencies, `cyhighs` is released under the Apache License 2.0. The upstream
+HiGHS license and notices are included in the wheels for attribution.
+libblastrampoline is MIT licensed, and the bundled OpenBLAS is BSD licensed.
+Both are dynamically linked, and neither imposes further obligations on
+`cyhighs` itself.
 
 ## What this means for you
 
-Because everything is static, installing `cyhighs` gives you a working solver
-immediately. You can confirm which HiGHS version you have by asking the library
-directly.
+Because HiGHS is statically linked and the BLAS backend it needs is bundled
+alongside it, installing `cyhighs` gives you a working solver immediately, with
+nothing further to install. You can confirm which HiGHS version you have by
+asking the library directly.
 
 ```python
 from cyhighs import highs_version

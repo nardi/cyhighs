@@ -22,13 +22,17 @@ reductions addressed by
 
 from __future__ import annotations
 
-from ._core import highs_infinity, highs_version
-from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType
-from .linprog_interface import linprog
-from .options import HighsOption
-from .result import LinearProblemSolution, OptimizeResult
-from .sparse_interface import solve_linear_problem_sparse
-from .validation import HIGHS_INFINITY, solve_linear_problem
+from ._blas_backend import select_blas_backend
+
+select_blas_backend()
+
+from ._core import highs_infinity, highs_version  # noqa: E402
+from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType  # noqa: E402
+from .linprog_interface import linprog  # noqa: E402
+from .options import HighsOption  # noqa: E402
+from .result import LinearProblemSolution, OptimizeResult  # noqa: E402
+from .sparse_interface import solve_linear_problem_sparse  # noqa: E402
+from .validation import HIGHS_INFINITY, solve_linear_problem  # noqa: E402
 
 __all__ = [
     "HIGHS_INFINITY",
