@@ -1,11 +1,11 @@
 """The main array based solving interface and its input validation.
 
-This module hosts :func:`solve_linear_problem`, the primary Python entry point.
-It accepts the problem as plain NumPy arrays, validates and coerces them to the
-exact dtypes the compiled core requires, merges the separate inequality and
-equality constraint matrices into the single row bounded structure that HiGHS
-expects, calls the core, and packages the raw results into a
-:class:`LinearProblemSolution`.
+This module hosts [`solve_linear_problem`][cyhighs.solve_linear_problem], the
+primary Python entry point. It accepts the problem as plain NumPy arrays,
+validates and coerces them to the exact dtypes the compiled core requires,
+merges the separate inequality and equality constraint matrices into the single
+row bounded structure that HiGHS expects, calls the core, and packages the raw
+results into a [`LinearProblemSolution`][cyhighs.LinearProblemSolution].
 
 The constraint matrices are supplied in compressed sparse column (CSC) form as
 three arrays each: values, row indices, and column pointers. This matches the
@@ -68,8 +68,8 @@ def _validate_csc_block(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Validate and coerce one CSC constraint block.
 
-    Returns the coerced ``(values, row_indices, column_pointers)`` triple. The
-    column pointer array must have length ``number_of_columns + 1`` and its final
+    Returns the coerced `(values, row_indices, column_pointers)` triple. The
+    column pointer array must have length `number_of_columns + 1` and its final
     entry must equal the number of stored values.
     """
     coerced_values = _as_float64_array(values, f"{label} values")
@@ -129,52 +129,52 @@ def solve_linear_problem(
     objective_sense: ObjectiveSense | int = ObjectiveSense.MINIMIZE,
     options=None,
 ) -> LinearProblemSolution:
-    """Solve ``minimize c @ x`` subject to linear constraints and bounds.
+    """Solve `minimize c @ x` subject to linear constraints and bounds.
 
     This is the thin low level interface. It maps almost one to one onto the
     HiGHS C API, so the constraint matrix must already be a single matrix in
     compressed sparse column form together with per row lower and upper bounds.
-    The problem solved is::
+    The problem solved is:
 
-        optimize   objective_coefficients @ x
-        subject to constraint_lower_bounds <= A @ x <= constraint_upper_bounds
-                   variable_lower_bounds <= x <= variable_upper_bounds
+    ```text
+    optimize   objective_coefficients @ x
+    subject to constraint_lower_bounds <= A @ x <= constraint_upper_bounds
+               variable_lower_bounds <= x <= variable_upper_bounds
+    ```
 
     Inequality and equality constraints are both expressed through the row
-    bounds. An inequality row ``A_i @ x <= b_i`` uses a lower bound of negative
-    infinity and an upper bound of ``b_i``, while an equality row uses equal
+    bounds. An inequality row `A_i @ x <= b_i` uses a lower bound of negative
+    infinity and an upper bound of `b_i`, while an equality row uses equal
     lower and upper bounds. The convenience wrapper
-    :func:`cyhighs.solve_linear_problem_sparse` builds this merged form from
-    separate inequality and equality matrices.
+    [`solve_linear_problem_sparse`][cyhighs.solve_linear_problem_sparse] builds
+    this merged form from separate inequality and equality matrices.
 
-    Parameters
-    ----------
-    objective_coefficients : array_like
-        The objective coefficient vector ``c`` of length ``number_of_columns``.
-    constraint_matrix_values, constraint_matrix_row_indices, \
-constraint_matrix_column_pointers : array_like, optional
-        The constraint matrix ``A`` in CSC form. All three must be given
-        together, or all omitted for a problem with no constraints.
-    constraint_lower_bounds, constraint_upper_bounds : array_like, optional
-        Per row lower and upper bounds. Required when the constraint matrix is
-        given, and both must have the same length.
-    variable_lower_bounds, variable_upper_bounds : array_like, optional
-        Per variable bounds. Default to negative and positive infinity, meaning
-        free variables.
-    integrality : array_like, optional
-        Per variable integrality using :class:`VariableType` values. When omitted
-        the problem is solved as a pure linear program.
-    initial_column_values : array_like, optional
-        A warm start solution for the variables.
-    objective_sense : ObjectiveSense or int, optional
-        Whether to minimize (default) or maximize the objective.
-    options : dict of HighsOption to value, optional
-        Solver options.
+    Args:
+        objective_coefficients: The objective coefficient vector `c` of length
+            `number_of_columns`.
+        constraint_matrix_values: The `A` matrix stored values in CSC form.
+        constraint_matrix_row_indices: The `A` matrix row indices in CSC form.
+        constraint_matrix_column_pointers: The `A` matrix column pointers in CSC
+            form. The three constraint matrix arrays must be given together, or
+            all omitted for a problem with no constraints.
+        constraint_lower_bounds: Per row lower bounds. Required when the
+            constraint matrix is given.
+        constraint_upper_bounds: Per row upper bounds. Required when the
+            constraint matrix is given, and must match the lower bounds length.
+        variable_lower_bounds: Per variable lower bounds. Default to negative
+            infinity, meaning free below.
+        variable_upper_bounds: Per variable upper bounds. Default to positive
+            infinity, meaning free above.
+        integrality: Per variable integrality using
+            [`VariableType`][cyhighs.VariableType] values. When omitted the
+            problem is solved as a pure linear program.
+        initial_column_values: A warm start solution for the variables.
+        objective_sense: Whether to minimize (default) or maximize the objective.
+        options: Solver options as a mapping from
+            [`HighsOption`][cyhighs.HighsOption] to a value.
 
-    Returns
-    -------
-    LinearProblemSolution
-        The solution record.
+    Returns:
+        The [`LinearProblemSolution`][cyhighs.LinearProblemSolution] record.
     """
     objective_coefficients = _as_float64_array(objective_coefficients, "objective_coefficients")
     number_of_columns = objective_coefficients.shape[0]

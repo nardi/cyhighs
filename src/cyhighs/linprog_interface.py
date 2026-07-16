@@ -1,12 +1,12 @@
-"""A drop in replacement for ``scipy.optimize.linprog``.
+"""A drop in replacement for `scipy.optimize.linprog`.
 
-This wrapper mirrors the SciPy ``linprog`` signature and return type so that it
+This wrapper mirrors the SciPy `linprog` signature and return type so that it
 can be used in place of SciPy in existing code. It accepts dense or sparse
 constraint matrices, translates the SciPy bounds and integrality conventions,
-solves through HiGHS, and returns a ``scipy.optimize.OptimizeResult`` populated
+solves through HiGHS, and returns a `scipy.optimize.OptimizeResult` populated
 with the fields SciPy callers expect.
 
-The signature adds nothing beyond SciPy except that the standard ``x0`` argument
+The signature adds nothing beyond SciPy except that the standard `x0` argument
 is wired to the HiGHS warm start, so an initial solution is actually used.
 """
 
@@ -55,9 +55,9 @@ def _pair_to_floats(pair) -> tuple[float, float]:
 def _process_bounds(bounds, number_of_columns: int) -> tuple[np.ndarray, np.ndarray]:
     """Translate the SciPy bounds argument into lower and upper bound arrays.
 
-    Follows the SciPy convention. ``None`` means the default of ``(0, None)`` for
-    every variable. A single ``(min, max)`` pair is broadcast to all variables. A
-    sequence of pairs sets each variable individually. A ``None`` inside a pair
+    Follows the SciPy convention. `None` means the default of `(0, None)` for
+    every variable. A single `(min, max)` pair is broadcast to all variables. A
+    sequence of pairs sets each variable individually. A `None` inside a pair
     means unbounded in that direction.
     """
     if bounds is None:
@@ -134,39 +134,31 @@ def linprog(
     integrality=None,
     options=None,
 ):
-    """Solve a linear program with a SciPy ``linprog`` compatible interface.
+    """Solve a linear program with a SciPy `linprog` compatible interface.
 
-    Minimizes ``c @ x`` subject to ``A_ub @ x <= b_ub``, ``A_eq @ x == b_eq`` and
+    Minimizes `c @ x` subject to `A_ub @ x <= b_ub`, `A_eq @ x == b_eq` and
     the given variable bounds. Constraint matrices may be dense array likes or
     SciPy sparse matrices.
 
-    Parameters
-    ----------
-    c : array_like
-        Coefficients of the linear objective to minimize.
-    A_ub, b_ub : array_like, optional
-        Inequality constraint matrix and right hand side.
-    A_eq, b_eq : array_like, optional
-        Equality constraint matrix and right hand side.
-    bounds : sequence, optional
-        Bounds on the variables following the SciPy convention. Defaults to
-        ``(0, None)`` for every variable.
-    method : str, optional
-        Present for SciPy compatibility. Only HiGHS is used, so this is accepted
-        and otherwise ignored.
-    x0 : array_like, optional
-        A warm start solution, wired to the HiGHS warm start.
-    integrality : array_like, optional
-        Per variable integrality using the SciPy convention, which matches the
-        :class:`cyhighs.VariableType` values.
-    options : dict, optional
-        Solver options as a mapping from :class:`cyhighs.HighsOption` to a value.
+    Args:
+        c: Coefficients of the linear objective to minimize.
+        A_ub: Inequality constraint matrix.
+        b_ub: Inequality right hand side.
+        A_eq: Equality constraint matrix.
+        b_eq: Equality right hand side.
+        bounds: Bounds on the variables following the SciPy convention. Defaults
+            to `(0, None)` for every variable.
+        method: Present for SciPy compatibility. Only HiGHS is used, so this is
+            accepted and otherwise ignored.
+        x0: A warm start solution, wired to the HiGHS warm start.
+        integrality: Per variable integrality using the SciPy convention, which
+            matches the [`VariableType`][cyhighs.VariableType] values.
+        options: Solver options as a mapping from
+            [`HighsOption`][cyhighs.HighsOption] to a value.
 
-    Returns
-    -------
-    scipy.optimize.OptimizeResult
-        A result object with ``x``, ``fun``, ``slack``, ``con``, ``status``,
-        ``success``, ``message`` and ``nit`` fields.
+    Returns:
+        A `scipy.optimize.OptimizeResult` with `x`, `fun`, `slack`, `con`,
+        `status`, `success`, `message` and `nit` fields.
     """
     from scipy.optimize import OptimizeResult
 

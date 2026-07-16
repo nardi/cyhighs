@@ -5,6 +5,9 @@
 *.egg-info/
 _skbuild/
 
+# Zensical documentation build output
+/site/
+
 # Compiled artifacts
 *.so
 *.pyd

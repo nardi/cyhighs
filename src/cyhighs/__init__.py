@@ -2,15 +2,19 @@
 
 This package exposes three layers, from lowest to highest level.
 
-- :func:`solve_linear_problem` is the main array interface. It takes the problem
-  as NumPy arrays, with the constraint matrices in compressed sparse column form.
-- :func:`solve_linear_problem_sparse` is a thin wrapper that accepts SciPy sparse
-  constraint matrices instead of unpacked component arrays.
-- :func:`linprog` is a drop in replacement for ``scipy.optimize.linprog``.
+- [`solve_linear_problem`][cyhighs.solve_linear_problem] is the main array
+  interface. It takes the problem as NumPy arrays, with the constraint matrices
+  in compressed sparse column form.
+- [`solve_linear_problem_sparse`][cyhighs.solve_linear_problem_sparse] is a thin
+  wrapper that accepts SciPy sparse constraint matrices instead of unpacked
+  component arrays.
+- [`linprog`][cyhighs.linprog] is a drop in replacement for
+  `scipy.optimize.linprog`.
 
-Problem statuses are returned as the :class:`ModelStatus` enumeration, variable
-integrality is expressed with :class:`VariableType`, and solver options are set
-with the :class:`HighsOption` enumeration.
+Problem statuses are returned as the [`ModelStatus`][cyhighs.ModelStatus]
+enumeration, variable integrality is expressed with
+[`VariableType`][cyhighs.VariableType], and solver options are set with the
+[`HighsOption`][cyhighs.HighsOption] enumeration.
 """
 
 from __future__ import annotations

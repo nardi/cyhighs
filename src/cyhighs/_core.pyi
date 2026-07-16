@@ -2,16 +2,16 @@
 
 """Low level Cython binding to the HiGHS C API.
 
-This module exposes a single solving entry point, ``solve_linear_problem_core``,
-that maps almost directly onto the ``Highs_passLp`` and ``Highs_passMip`` C
+This module exposes a single solving entry point, `solve_linear_problem_core`,
+that maps almost directly onto the `Highs_passLp` and `Highs_passMip` C
 functions. It performs no validation of its own. The pure Python layer in
-``cyhighs`` is responsible for coercing array dtypes, checking shapes, merging
+`cyhighs` is responsible for coercing array dtypes, checking shapes, merging
 the inequality and equality constraint matrices, and translating the raw integer
 results into the public enumerations. Keeping this module thin makes the mapping
 between Python and the C API easy to audit.
 
 The extension deliberately avoids the NumPy C API. Input arrays arrive as typed
-memory views and output arrays are allocated with plain ``numpy.empty`` and
+memory views and output arrays are allocated with plain `numpy.empty` and
 accessed through the buffer protocol, so the compiled module is not tied to any
 particular NumPy binary version.
 """
@@ -42,10 +42,8 @@ HIGHS_CONSTANTS = {
 def highs_version():
     """Return the version string of the linked HiGHS library.
 
-    Returns
-    -------
-    str
-        The HiGHS version, for example ``"1.15.1"``.
+    Returns:
+        The HiGHS version, for example `"1.15.1"`.
     """
 
 def highs_infinity():
@@ -54,10 +52,8 @@ def highs_infinity():
     Any bound whose magnitude is greater than or equal to this value is treated
     by HiGHS as unbounded.
 
-    Returns
-    -------
-    float
-        The infinity threshold, typically ``1e30``.
+    Returns:
+        The infinity threshold, typically `1e30`.
     """
 
 def merge_constraint_matrices_csc(
@@ -76,30 +72,28 @@ def merge_constraint_matrices_csc(
     the inequality rows. Because both matrices are in compressed sparse column
     form, the merge walks the columns and, for each column, copies the
     inequality entries followed by the equality entries. The equality row indices
-    are shifted down by ``number_of_inequality_rows`` so that they occupy the
+    are shifted down by `number_of_inequality_rows` so that they occupy the
     rows beneath the inequality block.
 
     All inputs must already have the exact dtype and contiguity used by the C
     API, which the Python caller guarantees. Empty blocks are represented by a
-    pointer array of length ``number_of_columns + 1`` filled with zeros and empty
+    pointer array of length `number_of_columns + 1` filled with zeros and empty
     value and index arrays.
 
-    Parameters
-    ----------
-    number_of_columns : int
-        The shared number of columns of both matrices.
-    inequality_values, inequality_indices, inequality_pointers : memoryview
-        The CSC arrays of the inequality matrix.
-    number_of_inequality_rows : int
-        The number of rows in the inequality matrix, used as the offset for the
-        equality row indices.
-    equality_values, equality_indices, equality_pointers : memoryview
-        The CSC arrays of the equality matrix.
+    Args:
+        number_of_columns: The shared number of columns of both matrices.
+        inequality_values: The CSC value array of the inequality matrix.
+        inequality_indices: The CSC row index array of the inequality matrix.
+        inequality_pointers: The CSC column pointer array of the inequality
+            matrix.
+        number_of_inequality_rows: The number of rows in the inequality matrix,
+            used as the offset for the equality row indices.
+        equality_values: The CSC value array of the equality matrix.
+        equality_indices: The CSC row index array of the equality matrix.
+        equality_pointers: The CSC column pointer array of the equality matrix.
 
-    Returns
-    -------
-    tuple of numpy.ndarray
-        The merged ``(values, row_indices, column_pointers)`` triple in CSC form.
+    Returns:
+        The merged `(values, row_indices, column_pointers)` triple in CSC form.
     """
 
 def solve_linear_problem_core(
@@ -119,44 +113,40 @@ def solve_linear_problem_core(
 ):
     """Solve a linear or mixed integer program through the HiGHS C API.
 
-    This is a thin translation of ``Highs_passLp`` and ``Highs_passMip``. The
+    This is a thin translation of `Highs_passLp` and `Highs_passMip`. The
     constraint matrix must already be in a single column wise CSC structure with
     row bounds encoding both inequality and equality rows. All arrays must have
     the exact dtype and contiguity expected here, which the Python layer
     guarantees.
 
-    Parameters
-    ----------
-    objective_sense : int
-        Either the minimize or maximize sense constant from the HiGHS C API.
-    objective_offset : float
-        Constant term added to the objective value.
-    column_costs : memoryview of float64
-        The objective coefficient vector ``c``, one entry per variable.
-    column_lower_bounds, column_upper_bounds : memoryview of float64
-        Lower and upper bounds on each variable.
-    row_lower_bounds, row_upper_bounds : memoryview of float64
-        Lower and upper bounds on each constraint row. Inequality rows use a
-        lower bound of negative infinity, equality rows use equal bounds.
-    a_matrix_starts : memoryview of int32
-        CSC column pointer array of length ``num_columns + 1``.
-    a_matrix_indices : memoryview of int32 or None
-        CSC row index array of length ``num_nonzeros``. May be None only when
-        there are no constraint rows and no nonzeros.
-    a_matrix_values : memoryview of float64 or None
-        CSC value array of length ``num_nonzeros``. May be None only when there
-        are no nonzeros.
-    integrality : memoryview of int32 or None
-        Per variable integrality using the HiGHS variable type encoding. When
-        None the problem is passed as a pure linear program.
-    initial_column_values : memoryview of float64 or None
-        Optional warm start values for the variables.
-    option_settings : sequence of tuple or None
-        Option settings as ``(name, kind, value)`` tuples.
+    Args:
+        objective_sense: Either the minimize or maximize sense constant from the
+            HiGHS C API.
+        objective_offset: Constant term added to the objective value.
+        column_costs: The objective coefficient vector `c`, one float64 entry per
+            variable.
+        column_lower_bounds: Lower bound on each variable, as float64.
+        column_upper_bounds: Upper bound on each variable, as float64.
+        row_lower_bounds: Lower bound on each constraint row, as float64.
+            Inequality rows use a lower bound of negative infinity.
+        row_upper_bounds: Upper bound on each constraint row, as float64. Equality
+            rows use equal lower and upper bounds.
+        a_matrix_starts: CSC column pointer array of length `num_columns + 1`, as
+            int32.
+        a_matrix_indices: CSC row index array of length `num_nonzeros`, as int32
+            or `None`. May be `None` only when there are no constraint rows and no
+            nonzeros.
+        a_matrix_values: CSC value array of length `num_nonzeros`, as float64 or
+            `None`. May be `None` only when there are no nonzeros.
+        integrality: Per variable integrality using the HiGHS variable type
+            encoding, as int32 or `None`. When `None` the problem is passed as a
+            pure linear program.
+        initial_column_values: Optional warm start values for the variables, as
+            float64 or `None`.
+        option_settings: Option settings as `(name, kind, value)` tuples, or
+            `None`.
 
-    Returns
-    -------
-    tuple
-        ``(model_status, column_values, objective_value, column_dual_values,
-        row_dual_values, row_values, simplex_iteration_count)``.
+    Returns:
+        A `(model_status, column_values, objective_value, column_dual_values,
+        row_dual_values, row_values, simplex_iteration_count)` tuple.
     """

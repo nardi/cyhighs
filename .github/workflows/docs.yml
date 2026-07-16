@@ -1,0 +1,51 @@
+name: Documentation
+
+# Build the Zensical documentation site and publish it to GitHub Pages on every
+# push to the main branch. The build also runs from the Actions tab on demand.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow the workflow to publish to GitHub Pages using the OIDC token.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish rather than cancelling it, so a published site
+# is never left half updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync environment and build the extension
+        # Building the extension makes the compiled cyhighs importable, so
+        # mkdocstrings can resolve every symbol in the API reference.
+        run: uv sync
+      - name: Build the documentation
+        run: uv run zensical build --clean
+      - name: Upload the site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the site artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

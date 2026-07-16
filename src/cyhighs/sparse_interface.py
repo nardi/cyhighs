@@ -2,7 +2,7 @@
 
 This layer takes the inequality and equality constraint matrices as SciPy sparse
 matrices, merges them into the single row bounded matrix that the low level
-:func:`cyhighs.solve_linear_problem` expects, and delegates. The merge picks the
+[`solve_linear_problem`][cyhighs.solve_linear_problem] expects, and delegates. The merge picks the
 most efficient path for the incoming sparse format. Two matrices already in
 compressed sparse column form are merged column wise by a Cython routine, while
 matrices in a row oriented format are stacked in that native format and then
@@ -22,8 +22,8 @@ from .validation import HIGHS_INFINITY, _as_index_array, solve_linear_problem
 def _merge_sparse_constraints(inequality_matrix, equality_matrix):
     """Merge the inequality and equality matrices into one CSC matrix.
 
-    Returns a ``(values, row_indices, column_pointers, number_of_inequality_rows,
-    number_of_equality_rows)`` tuple. The row indices place the equality rows
+    Returns a `(values, row_indices, column_pointers, number_of_inequality_rows,
+    number_of_equality_rows)` tuple. The row indices place the equality rows
     directly below the inequality rows.
 
     The merge path depends on the input format. Two CSC matrices are merged by
@@ -126,38 +126,33 @@ def solve_linear_problem_sparse(
 ) -> LinearProblemSolution:
     """Solve a linear or mixed integer program with SciPy sparse matrices.
 
-    Minimizes ``c @ x`` subject to ``A_ub @ x <= b_ub``, ``A_eq @ x == b_eq`` and
+    Minimizes `c @ x` subject to `A_ub @ x <= b_ub`, `A_eq @ x == b_eq` and
     the variable bounds. The two constraint matrices are merged internally into
-    the row bounded form used by :func:`cyhighs.solve_linear_problem`.
+    the row bounded form used by
+    [`solve_linear_problem`][cyhighs.solve_linear_problem].
 
-    Parameters
-    ----------
-    objective_coefficients : array_like
-        The objective coefficient vector ``c``.
-    inequality_constraint_matrix : scipy.sparse matrix, optional
-        The inequality matrix ``A_ub`` in any sparse format.
-    inequality_upper_bounds : array_like, optional
-        The right hand side vector ``b_ub``. Required when ``A_ub`` is given.
-    equality_constraint_matrix : scipy.sparse matrix, optional
-        The equality matrix ``A_eq`` in any sparse format. When both matrices are
-        given they must share the same sparse format.
-    equality_right_hand_sides : array_like, optional
-        The right hand side vector ``b_eq``. Required when ``A_eq`` is given.
-    variable_lower_bounds, variable_upper_bounds : array_like, optional
-        Per variable bounds.
-    integrality : array_like, optional
-        Per variable integrality using :class:`cyhighs.VariableType` values.
-    initial_column_values : array_like, optional
-        A warm start solution.
-    objective_sense : ObjectiveSense or int, optional
-        Whether to minimize (default) or maximize.
-    options : dict of HighsOption to value, optional
-        Solver options.
+    Args:
+        objective_coefficients: The objective coefficient vector `c`.
+        inequality_constraint_matrix: The inequality matrix `A_ub` in any sparse
+            format.
+        inequality_upper_bounds: The right hand side vector `b_ub`. Required when
+            `A_ub` is given.
+        equality_constraint_matrix: The equality matrix `A_eq` in any sparse
+            format. When both matrices are given they must share the same sparse
+            format.
+        equality_right_hand_sides: The right hand side vector `b_eq`. Required
+            when `A_eq` is given.
+        variable_lower_bounds: Per variable lower bounds.
+        variable_upper_bounds: Per variable upper bounds.
+        integrality: Per variable integrality using
+            [`VariableType`][cyhighs.VariableType] values.
+        initial_column_values: A warm start solution.
+        objective_sense: Whether to minimize (default) or maximize.
+        options: Solver options as a mapping from
+            [`HighsOption`][cyhighs.HighsOption] to a value.
 
-    Returns
-    -------
-    LinearProblemSolution
-        The solution record.
+    Returns:
+        The [`LinearProblemSolution`][cyhighs.LinearProblemSolution] record.
     """
     if inequality_constraint_matrix is not None and inequality_upper_bounds is None:
         raise ValueError("inequality_upper_bounds is required when the inequality matrix is given")

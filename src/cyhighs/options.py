@@ -1,15 +1,17 @@
 """HiGHS solver options exposed as a typed enumeration.
 
-Each :class:`HighsOption` member carries the exact option name string that HiGHS
-expects together with the value kind that selects the correct typed C setter.
-Passing options as enumeration members rather than raw strings means typos are
-caught at lookup time and the value type is validated before it ever reaches the
-C API.
+Each [`HighsOption`][cyhighs.HighsOption] member carries the exact option name
+string that HiGHS expects together with the value kind that selects the correct
+typed C setter. Passing options as enumeration members rather than raw strings
+means typos are caught at lookup time and the value type is validated before it
+ever reaches the C API.
 
 Options are supplied to the solving functions as a mapping from
-:class:`HighsOption` to a value, for example::
+[`HighsOption`][cyhighs.HighsOption] to a value, for example:
 
-    {HighsOption.TIME_LIMIT: 10.0, HighsOption.OUTPUT_FLAG: False}
+```python
+{HighsOption.TIME_LIMIT: 10.0, HighsOption.OUTPUT_FLAG: False}
+```
 
 The set of options declared here is a curated subset of the full HiGHS option
 list, chosen to cover the most common needs. The value kinds match the four
@@ -40,8 +42,8 @@ _ACCEPTED_PYTHON_TYPES = {
 class HighsOption(Enum):
     """A HiGHS option together with its name and value kind.
 
-    The enumeration value is a ``(name, kind)`` pair. ``name`` is the string the
-    HiGHS C API expects and ``kind`` is one of the ``OPTION_KIND_*`` labels.
+    The enumeration value is a `(name, kind)` pair. `name` is the string the
+    HiGHS C API expects and `kind` is one of the `OPTION_KIND_*` labels.
     """
 
     OUTPUT_FLAG = ("output_flag", OPTION_KIND_BOOL)
@@ -124,22 +126,18 @@ def build_option_settings(
 ) -> list[tuple[str, str, object]] | None:
     """Validate an option mapping and convert it to core level tuples.
 
-    Parameters
-    ----------
-    options : dict of HighsOption to value, or None
-        The options to apply. Keys must be :class:`HighsOption` members. Values
-        must match the value kind declared by each option.
+    Args:
+        options: The options to apply, as a mapping from
+            [`HighsOption`][cyhighs.HighsOption] members to values, or `None`.
+            Values must match the value kind declared by each option.
 
-    Returns
-    -------
-    list of tuple, or None
-        A list of ``(name, kind, value)`` tuples ready for the compiled core, or
-        None if no options were supplied.
+    Returns:
+        A list of `(name, kind, value)` tuples ready for the compiled core, or
+        `None` if no options were supplied.
 
-    Raises
-    ------
-    TypeError
-        If a key is not a :class:`HighsOption` or a value has the wrong type.
+    Raises:
+        TypeError: If a key is not a [`HighsOption`][cyhighs.HighsOption] member
+            or a value has the wrong type.
     """
     if options is None:
         return None

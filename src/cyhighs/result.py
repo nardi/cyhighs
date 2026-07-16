@@ -14,26 +14,21 @@ class LinearProblemSolution(NamedTuple):
 
     The field names follow HiGHS terminology. Columns are decision variables and
     rows are constraints. For mixed integer problems the dual value and row value
-    fields are set to None, since dual information is not defined there.
+    fields are set to `None`, since dual information is not defined there.
 
-    Attributes
-    ----------
-    model_status : ModelStatus
-        The status HiGHS reported for the solve.
-    column_values : numpy.ndarray
-        The solution vector ``x``, one value per variable.
-    objective_value : float
-        The objective value at the returned solution.
-    column_dual_values : numpy.ndarray or None
-        The reduced costs, one per variable. None for mixed integer problems.
-    row_dual_values : numpy.ndarray or None
-        The dual values of the constraints, one per row. None for mixed integer
-        problems.
-    row_values : numpy.ndarray or None
-        The activity of each constraint row, that is the left hand side value at
-        the solution. None for mixed integer problems.
-    simplex_iteration_count : int
-        The number of simplex iterations performed, or -1 if not available.
+    Attributes:
+        model_status: The status HiGHS reported for the solve, as a
+            [`ModelStatus`][cyhighs.ModelStatus] value.
+        column_values: The solution vector `x`, one value per variable.
+        objective_value: The objective value at the returned solution.
+        column_dual_values: The reduced costs, one per variable. `None` for mixed
+            integer problems.
+        row_dual_values: The dual values of the constraints, one per row. `None`
+            for mixed integer problems.
+        row_values: The activity of each constraint row, that is the left hand
+            side value at the solution. `None` for mixed integer problems.
+        simplex_iteration_count: The number of simplex iterations performed, or
+            -1 if not available.
     """
 
     model_status: ModelStatus
