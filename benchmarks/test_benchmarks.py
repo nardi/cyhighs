@@ -7,23 +7,38 @@ solve reached an optimal solution, so a broken solve fails rather than silently
 reporting a fast but wrong result.
 """
 
+from enum import Enum
+from typing import TypeAlias
+
 import pytest
 
 from cyhighs import linprog, solve_linear_problem, solve_linear_problem_sparse
 
 from .problems import make_problem
 
+
+class ProblemType(Enum):
+    """Whether a benchmarked problem is a pure LP or a mixed integer program."""
+
+    LP = "lp"
+    MIP = "mip"
+
+
+ProblemSize: TypeAlias = int
+
 # LPs are exercised up to 10000 variables. MIPs stop at 1000 variables, since a
 # larger mixed integer instance risks a branch and bound blowup that would make
 # the benchmark slow and noisy.
-_LP_SIZES = [100, 1000, 10000]
-_MIP_SIZES = [100, 1000]
+_LP_SIZES: list[ProblemSize] = [100, 1000, 10000]
+_MIP_SIZES: list[ProblemSize] = [100, 1000]
 
-# One params list drives the problem fixture below. Each entry is a
-# (mixed_integer, number_of_variables) pair, with a matching test id such as
-# "lp-100" or "mip-1000" so failures are easy to identify.
-_PROBLEM_PARAMS = [(False, n) for n in _LP_SIZES] + [(True, n) for n in _MIP_SIZES]
-_PROBLEM_IDS = [f"mip-{n}" if mixed_integer else f"lp-{n}" for mixed_integer, n in _PROBLEM_PARAMS]
+# Every (ProblemType, ProblemSize) pair the problem fixture below is
+# parametrized over, with a matching test id such as "lp-100" or "mip-1000"
+# so failures are easy to identify.
+_PROBLEM_PARAMS: list[tuple[ProblemType, ProblemSize]] = [
+    (ProblemType.LP, n) for n in _LP_SIZES
+] + [(ProblemType.MIP, n) for n in _MIP_SIZES]
+_PROBLEM_IDS = [f"{problem_type.value}-{n}" for problem_type, n in _PROBLEM_PARAMS]
 
 # Keyword arguments passed to every benchmark.pedantic call below. A fixed
 # round count keeps every benchmark comparable and avoids pytest-benchmark's
@@ -37,11 +52,11 @@ _PEDANTIC_KWARGS = {"rounds": 10, "iterations": 1, "warmup_rounds": 1}
 def problem(request):
     """Build the LP or MIP problem for the requested size.
 
-    Parametrized over every (mixed_integer, number_of_variables) pair in
+    Parametrized over every (ProblemType, ProblemSize) pair in
     _PROBLEM_PARAMS, so each test function below runs once per size.
     """
-    mixed_integer, number_of_variables = request.param
-    return make_problem(number_of_variables, mixed_integer=mixed_integer)
+    problem_type, number_of_variables = request.param
+    return make_problem(number_of_variables, mixed_integer=problem_type == ProblemType.MIP)
 
 
 def test_array_solve(benchmark, problem):
