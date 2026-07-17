@@ -26,6 +26,12 @@ lbt-compatible BLAS themselves.
 On macOS, this module does nothing. HiGHS unconditionally links Apple's
 Accelerate framework there instead of going through lbt (see the BLAS/LAPACK
 section of the top-level CMakeLists.txt), so there is no backend to register.
+
+A build compiled with CMake's CYHIGHS_USE_LBT off (see CMakeLists.txt) links
+OpenBLAS directly with no lbt in the process at all, for local A/B testing
+against the default lbt-forwarded build. This module also does nothing there,
+since there is no lbt to configure and HiGHS already has a working BLAS
+backend linked in directly.
 """
 
 from __future__ import annotations
@@ -92,6 +98,21 @@ def _locate_bundled_openblas() -> str | None:
     return _first_match((core_dir, core_dir.parent / "cyhighs.libs"), pattern_name)
 
 
+def _lbt_present() -> bool:
+    """Return whether this build links against libblastrampoline at all.
+
+    A CYHIGHS_USE_LBT=OFF build (see CMakeLists.txt) links OpenBLAS directly,
+    so no lbt files exist next to `_core` at all. That is a normal, expected
+    build configuration and not a broken lbt install, so it is checked
+    separately from `_open_loaded_lbt` returning None, which does mean lbt
+    should be present but could not be located.
+    """
+    core_dir = _core_dir()
+    search_dirs = (core_dir, core_dir.parent / "cyhighs.libs")
+    pattern_name = "*blastrampoline*.dll" if sys.platform == "win32" else "libblastrampoline.so*"
+    return _first_match(search_dirs, pattern_name) is not None
+
+
 def _open_loaded_lbt() -> ctypes.CDLL | None:
     """Return a handle to the libblastrampoline `_core` already loaded.
 
@@ -156,10 +177,12 @@ def configure_blas_backend() -> None:
     """Point the already-loaded libblastrampoline at cyhighs's BLAS backend.
 
     Called after `_core` is imported, so lbt is already in the process. Does
-    nothing on macOS (no lbt), or if the user has set `LBT_DEFAULT_LIBS`
-    (respecting their choice), or if lbt or a backend cannot be located.
+    nothing on macOS (no lbt), on a CYHIGHS_USE_LBT=OFF build (also no lbt),
+    or if the user has set `LBT_DEFAULT_LIBS` (respecting their choice).
     """
     if sys.platform == "darwin" or "LBT_DEFAULT_LIBS" in os.environ:
+        return
+    if not _lbt_present():
         return
 
     debug = bool(os.environ.get("CYHIGHS_LBT_DEBUG"))

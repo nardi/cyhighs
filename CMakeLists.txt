@@ -5,18 +5,22 @@
 # On Linux and Windows, HiPO's BLAS dependency is satisfied by
 # libblastrampoline (lbt) rather than by linking OpenBLAS directly: lbt is a
 # small MIT-licensed shared library that exports the standard BLAS/LAPACK ABI
-# and forwards each call, at runtime, to whichever real BLAS implementation is
-# named by the LBT_DEFAULT_LIBS environment variable (this is the same
-# mechanism Julia's LinearAlgebra/HiGHS.jl use to switch BLAS backends without
-# recompiling). cyhighs's own Python `__init__.py` sets that variable before
-# importing the compiled extension:
+# and forwards each call, at runtime, to whichever real BLAS implementation it
+# has been pointed at (this is the same mechanism Julia's LinearAlgebra/
+# HiGHS.jl use to switch BLAS backends without recompiling). Once the compiled
+# extension (and therefore lbt) is loaded, cyhighs's own
+# src/cyhighs/_blas_backend.py calls lbt's `lbt_forward` C API to register:
 #
-#   * by default, to a prebuilt OpenBLAS bundled inside the wheel (so the
+#   * by default, a prebuilt OpenBLAS bundled inside the wheel (so the
 #     package remains fully self contained with zero configuration, matching
 #     the project's historical "no external system dependencies" promise);
-#   * to Intel MKL instead, if the optional `cyhighs[mkl]` extra is installed
+#   * Intel MKL instead, if the optional `cyhighs[mkl]` extra is installed
 #     and its shared library can be located (Linux x86_64 / Windows x86_64
 #     only -- Intel has never published MKL for macOS or for ARM).
+#
+# CYHIGHS_USE_LBT (below) turns this off, linking the bundled OpenBLAS
+# directly with no lbt in the process at all. It exists for local A/B testing
+# against the default lbt-forwarded build, not as a shipped configuration.
 #
 # On macOS, none of this applies. Reading HiGHS's own cmake/FindHipoDeps.cmake
 # shows it unconditionally links Apple's Accelerate framework on Apple
@@ -76,6 +80,17 @@ find_package(
 # The HiGHS release built from source. Used as the FetchContent git tag
 # (v${HIGHS_VERSION}).
 set(HIGHS_VERSION 1.15.1)
+
+# Off links the bundled OpenBLAS directly instead of routing it through
+# libblastrampoline, with no forwarding layer in between. This exists for
+# local A/B testing against the default lbt-forwarded build, not as a shipped
+# configuration: with it off, the cyhighs[mkl] extra and the CYHIGHS_LBT_PREFER/
+# CYHIGHS_LBT_DEBUG environment variables (see src/cyhighs/_blas_backend.py)
+# have no effect, since there is no lbt in the process to configure. Toggle it
+# with, for example, `uv sync --config-settings=cmake.define.CYHIGHS_USE_LBT=OFF`,
+# in a clean build directory since scikit-build-core otherwise reuses the same
+# build directory (see build-dir in pyproject.toml) across runs.
+option(CYHIGHS_USE_LBT "Route HiPO's BLAS through libblastrampoline" ON)
 
 # The libblastrampoline release fetched as a prebuilt binary. The version,
 # the release tag's "+<build>" suffix, and the per-triplet asset hashes below
@@ -271,101 +286,15 @@ endif()
 set(_bundled_backend_libs "")
 set(_needs_openblas_extension_stub FALSE)
 if(NOT APPLE)
-  set(_needs_openblas_extension_stub TRUE)
-  # Fetch libblastrampoline (lbt): the BLAS/LAPACK ABI HiPO links against.
-  # HiGHS's FindHipoDeps.cmake does not call find_library(NAMES openblas)
-  # directly (confirmed by reading that file). With BLAS_LIBRARIES/BLA_VENDOR
-  # unset, it tries find_package(OpenBLAS CONFIG) first (finds nothing here,
-  # since neither lbt nor the bundled OpenBLAS ships a CMake package config),
-  # then sets BLA_VENDOR=OpenBLAS and calls find_package(BLAS). CMake's own
-  # FindBLAS.cmake module handles that vendor with an internal
-  # find_library(NAMES openblas) that does respect
-  # CMAKE_LIBRARY_PATH/CMAKE_PREFIX_PATH, so staging lbt under the "openblas"
-  # name in a directory prepended to those two variables (below) still works,
-  # just through CMake's own module rather than a literal find_library() call
-  # in HiGHS's own code as originally assumed.
-  set(_lbt_hash "")
-  if(_lbt_triplet STREQUAL "aarch64-linux-gnu")
-    set(_lbt_hash 9cca820658a7206b3324bf4fb309154bf2427c81ebd0f6a448a761183a553cdb)
-  elseif(_lbt_triplet STREQUAL "aarch64-linux-musl")
-    set(_lbt_hash a50cd8b2cf54df66c324480e66a563d0a756173914f0399d6b17bd1f627def28)
-  elseif(_lbt_triplet STREQUAL "x86_64-linux-gnu")
-    set(_lbt_hash 76ddd4223122d9664f827fc940f7696bb4225cfd1cf6bb00b3acbeb524bcc609)
-  elseif(_lbt_triplet STREQUAL "x86_64-linux-musl")
-    set(_lbt_hash 759c0699e8675b1ca13d3f574dfab339f62825cae168a525549b669535207c92)
-  elseif(_lbt_triplet STREQUAL "x86_64-w64-mingw32")
-    set(_lbt_hash 4d301c454f1259d50db44a2a0af83cb441d3cbc790963c375ed27686d884624f)
-  endif()
-  set(_lbt_asset "libblastrampoline.v${CYHIGHS_LBT_VERSION}.${_lbt_triplet}.tar.gz")
-  set(_lbt_url
-    "https://github.com/JuliaBinaryWrappers/libblastrampoline_jll.jl/releases/download/libblastrampoline-v${CYHIGHS_LBT_VERSION}+${CYHIGHS_LBT_BUILD}/${_lbt_asset}")
-  set(_lbt_root "${CMAKE_BINARY_DIR}/lbt-prebuilt")
-  cyhighs_fetch_and_extract("${_lbt_url}" "${_lbt_hash}" "${_lbt_root}")
-
-  if(WIN32)
-    file(GLOB _lbt_dll "${_lbt_root}/bin/libblastrampoline*.dll")
-  else()
-    file(GLOB _lbt_shared "${_lbt_root}/lib/libblastrampoline.*")
-  endif()
-
-  # The directory the find_package(BLAS)/BLA_VENDOR=OpenBLAS lookup above is
-  # pointed at, via CMAKE_LIBRARY_PATH/CMAKE_PREFIX_PATH (prepended below). A
-  # copy of lbt lives here under the "openblas" name so that lookup resolves
-  # to lbt instead of a real BLAS, with no upstream HiGHS source change.
-  set(_blas_shim_dir "${CMAKE_BINARY_DIR}/blas-shim")
-  file(MAKE_DIRECTORY "${_blas_shim_dir}")
-
-  if(WIN32)
-    if(NOT _lbt_dll)
-      message(FATAL_ERROR "No libblastrampoline DLL found in ${_lbt_root}/bin")
-    endif()
-    list(GET _lbt_dll 0 _lbt_dll)
-    file(COPY_FILE "${_lbt_dll}" "${_blas_shim_dir}/blastrampoline.dll")
-    # CMake's FindBLAS.cmake looks for an import library (openblas.lib) on
-    # Windows, not the DLL itself. The JLL release only ships a MinGW-style
-    # *.dll.a import library (confirmed by extracting the real archive),
-    # which MSVC cannot consume directly, so generate a fresh one.
-    cyhighs_generate_msvc_import_lib(
-      "${_blas_shim_dir}/blastrampoline.dll"
-      "${_blas_shim_dir}/openblas.def"
-      "${_blas_shim_dir}/openblas.lib")
-    # The JLL release is MinGW-built and ships with DWARF debug sections still
-    # attached (confirmed against a real built wheel: stripping it cut the DLL
-    # from 2.8 MB to 1.2 MB). cibuildwheel's Windows build runs outside an
-    # MSYS/MinGW shell (the same reason cyhighs_generate_msvc_import_lib above
-    # cannot assume dumpbin/lib.exe are on PATH), so a MinGW strip.exe is not
-    # guaranteed to be present; skip stripping rather than fail the build if
-    # none is found.
-    find_program(_mingw_strip strip)
-    if(_mingw_strip)
-      execute_process(COMMAND "${_mingw_strip}" --strip-unneeded "${_blas_shim_dir}/blastrampoline.dll")
-    endif()
-  else()
-    if(NOT _lbt_shared)
-      message(FATAL_ERROR "No libblastrampoline shared library found in ${_lbt_root}/lib")
-    endif()
-    # Preserve the whole libblastrampoline.so -> .so.N -> .so.N.N.N chain
-    # under its own names, not just one file renamed to "libopenblas.so".
-    # The linker embeds whatever SONAME is baked into the real versioned
-    # file (e.g. libblastrampoline.so.5) as _core's NEEDED entry, regardless
-    # of what name/path we link it under -- confirmed by a real CI failure
-    # at import time: "libblastrampoline.so.5: cannot open shared object
-    # file". Renaming only the copy find_package(BLAS) is pointed at left
-    # that actual SONAME target missing from the shim directory entirely.
-    file(COPY ${_lbt_shared} DESTINATION "${_blas_shim_dir}")
-    list(GET _lbt_shared 0 _lbt_shared_one)
-    file(COPY_FILE "${_lbt_shared_one}" "${_blas_shim_dir}/libopenblas.so")
-  endif()
-
-  # The *default* lbt-forwarded backend (not linked directly -- see
-  # LBT_DEFAULT_LIBS in src/cyhighs/_blas_backend.py). Compiling OpenBLAS
-  # ourselves is deliberately avoided: it's what caused the AVX2/AVX512 build
-  # breakage this project hit and moved away from previously. conda-forge
-  # provides a prebuilt, plain-symbol OpenBLAS for every platform reached
-  # here except musl Linux (conda-forge is glibc-only); musllinux instead
-  # uses the Alpine package installed via apk in CI (see wheels.yml),
-  # discovered via find_library the same way this project found OpenBLAS
-  # before adopting lbt.
+  # The *default* backend: real OpenBLAS, forwarded to by lbt at runtime when
+  # CYHIGHS_USE_LBT is on (the default), or linked directly when it is off.
+  # Fetched either way. Compiling OpenBLAS ourselves is deliberately avoided:
+  # it's what caused the AVX2/AVX512 build breakage this project hit and
+  # moved away from previously. conda-forge provides a prebuilt, plain-symbol
+  # OpenBLAS for every platform reached here except musl Linux (conda-forge
+  # is glibc-only); musllinux instead uses the Alpine package installed via
+  # apk in CI (see wheels.yml), discovered via find_library the same way
+  # this project found OpenBLAS before adopting lbt.
   if(_libc STREQUAL "musl")
     find_library(_openblas_backend NAMES openblas REQUIRED)
     list(APPEND _bundled_backend_libs "${_openblas_backend}")
@@ -419,17 +348,7 @@ if(NOT APPLE)
     endif()
     list(GET _openblas_lib 0 _openblas_backend)
 
-    if(WIN32)
-      # MSVC's linker needs a .lib import library, not the bare DLL, and
-      # conda-forge ships none for OpenBLAS (it's only linked here to force
-      # delvewheel to bundle it -- see the target_link_libraries comment
-      # below). Generate one the same way as for libblastrampoline above.
-      cyhighs_generate_msvc_import_lib(
-        "${_openblas_backend}"
-        "${_blas_shim_dir}/openblas-backend.def"
-        "${_blas_shim_dir}/openblas-backend.lib")
-      list(APPEND _bundled_backend_libs "${_blas_shim_dir}/openblas-backend.lib")
-    else()
+    if(NOT WIN32)
       list(APPEND _bundled_backend_libs "${_openblas_backend}")
     endif()
 
@@ -441,6 +360,125 @@ if(NOT APPLE)
       if(_libgfortran_lib)
         list(GET _libgfortran_lib 0 _libgfortran_backend)
         list(APPEND _bundled_backend_libs "${_libgfortran_backend}")
+      endif()
+    endif()
+  endif()
+
+  # The directory the find_package(BLAS)/BLA_VENDOR=OpenBLAS lookup below is
+  # pointed at, via CMAKE_LIBRARY_PATH/CMAKE_PREFIX_PATH (prepended below).
+  # HiGHS's FindHipoDeps.cmake does not call find_library(NAMES openblas)
+  # directly (confirmed by reading that file). With BLAS_LIBRARIES/BLA_VENDOR
+  # unset, it tries find_package(OpenBLAS CONFIG) first (finds nothing here,
+  # since neither lbt nor the bundled OpenBLAS ships a CMake package config),
+  # then sets BLA_VENDOR=OpenBLAS and calls find_package(BLAS). CMake's own
+  # FindBLAS.cmake module handles that vendor with an internal
+  # find_library(NAMES openblas) that does respect
+  # CMAKE_LIBRARY_PATH/CMAKE_PREFIX_PATH, so whatever is staged here under the
+  # "openblas" name is what HiGHS links, with no upstream HiGHS source change.
+  set(_blas_shim_dir "${CMAKE_BINARY_DIR}/blas-shim")
+  file(REMOVE_RECURSE "${_blas_shim_dir}")
+  file(MAKE_DIRECTORY "${_blas_shim_dir}")
+
+  if(CYHIGHS_USE_LBT)
+    set(_needs_openblas_extension_stub TRUE)
+    # Fetch libblastrampoline (lbt): the BLAS/LAPACK ABI HiPO links against,
+    # staged here under the "openblas" name so it is what find_package(BLAS)
+    # above resolves to, instead of the real backend fetched above.
+    set(_lbt_hash "")
+    if(_lbt_triplet STREQUAL "aarch64-linux-gnu")
+      set(_lbt_hash 9cca820658a7206b3324bf4fb309154bf2427c81ebd0f6a448a761183a553cdb)
+    elseif(_lbt_triplet STREQUAL "aarch64-linux-musl")
+      set(_lbt_hash a50cd8b2cf54df66c324480e66a563d0a756173914f0399d6b17bd1f627def28)
+    elseif(_lbt_triplet STREQUAL "x86_64-linux-gnu")
+      set(_lbt_hash 76ddd4223122d9664f827fc940f7696bb4225cfd1cf6bb00b3acbeb524bcc609)
+    elseif(_lbt_triplet STREQUAL "x86_64-linux-musl")
+      set(_lbt_hash 759c0699e8675b1ca13d3f574dfab339f62825cae168a525549b669535207c92)
+    elseif(_lbt_triplet STREQUAL "x86_64-w64-mingw32")
+      set(_lbt_hash 4d301c454f1259d50db44a2a0af83cb441d3cbc790963c375ed27686d884624f)
+    endif()
+    set(_lbt_asset "libblastrampoline.v${CYHIGHS_LBT_VERSION}.${_lbt_triplet}.tar.gz")
+    set(_lbt_url
+      "https://github.com/JuliaBinaryWrappers/libblastrampoline_jll.jl/releases/download/libblastrampoline-v${CYHIGHS_LBT_VERSION}+${CYHIGHS_LBT_BUILD}/${_lbt_asset}")
+    set(_lbt_root "${CMAKE_BINARY_DIR}/lbt-prebuilt")
+    cyhighs_fetch_and_extract("${_lbt_url}" "${_lbt_hash}" "${_lbt_root}")
+
+    if(WIN32)
+      file(GLOB _lbt_dll "${_lbt_root}/bin/libblastrampoline*.dll")
+      if(NOT _lbt_dll)
+        message(FATAL_ERROR "No libblastrampoline DLL found in ${_lbt_root}/bin")
+      endif()
+      list(GET _lbt_dll 0 _lbt_dll)
+      file(COPY_FILE "${_lbt_dll}" "${_blas_shim_dir}/blastrampoline.dll")
+      # CMake's FindBLAS.cmake looks for an import library (openblas.lib) on
+      # Windows, not the DLL itself. The JLL release only ships a MinGW-style
+      # *.dll.a import library (confirmed by extracting the real archive),
+      # which MSVC cannot consume directly, so generate a fresh one.
+      cyhighs_generate_msvc_import_lib(
+        "${_blas_shim_dir}/blastrampoline.dll"
+        "${_blas_shim_dir}/openblas.def"
+        "${_blas_shim_dir}/openblas.lib")
+      # The JLL release is MinGW-built and ships with DWARF debug sections
+      # still attached (confirmed against a real built wheel: stripping it
+      # cut the DLL from 2.8 MB to 1.2 MB). cibuildwheel's Windows build runs
+      # outside an MSYS/MinGW shell (the same reason
+      # cyhighs_generate_msvc_import_lib above cannot assume dumpbin/lib.exe
+      # are on PATH), so a MinGW strip.exe is not guaranteed to be present;
+      # skip stripping rather than fail the build if none is found.
+      find_program(_mingw_strip strip)
+      if(_mingw_strip)
+        execute_process(COMMAND "${_mingw_strip}" --strip-unneeded "${_blas_shim_dir}/blastrampoline.dll")
+      endif()
+      # A separate import library for the real backend, purely so delvewheel
+      # treats it as a normal dependency to vendor (see the
+      # target_link_libraries comment below). openblas.lib above points at
+      # blastrampoline.dll instead, for HiGHS's own BLAS resolution.
+      cyhighs_generate_msvc_import_lib(
+        "${_openblas_backend}"
+        "${_blas_shim_dir}/openblas-backend.def"
+        "${_blas_shim_dir}/openblas-backend.lib")
+      list(APPEND _bundled_backend_libs "${_blas_shim_dir}/openblas-backend.lib")
+    else()
+      file(GLOB _lbt_shared "${_lbt_root}/lib/libblastrampoline.*")
+      if(NOT _lbt_shared)
+        message(FATAL_ERROR "No libblastrampoline shared library found in ${_lbt_root}/lib")
+      endif()
+      # Preserve the whole libblastrampoline.so -> .so.N -> .so.N.N.N chain
+      # under its own names, not just one file renamed to "libopenblas.so".
+      # The linker embeds whatever SONAME is baked into the real versioned
+      # file (e.g. libblastrampoline.so.5) as _core's NEEDED entry, regardless
+      # of what name/path we link it under -- confirmed by a real CI failure
+      # at import time: "libblastrampoline.so.5: cannot open shared object
+      # file". Renaming only the copy find_package(BLAS) is pointed at left
+      # that actual SONAME target missing from the shim directory entirely.
+      file(COPY ${_lbt_shared} DESTINATION "${_blas_shim_dir}")
+      list(GET _lbt_shared 0 _lbt_shared_one)
+      file(COPY_FILE "${_lbt_shared_one}" "${_blas_shim_dir}/libopenblas.so")
+    endif()
+  else()
+    # No lbt: point find_package(BLAS) straight at the real backend fetched
+    # above, so HiGHS links it directly with no forwarding layer in between.
+    # This exists for local A/B testing (see the CYHIGHS_USE_LBT docstring
+    # near the top of this file), not as a shipped configuration.
+    if(WIN32)
+      cyhighs_generate_msvc_import_lib(
+        "${_openblas_backend}"
+        "${_blas_shim_dir}/openblas.def"
+        "${_blas_shim_dir}/openblas.lib")
+      list(APPEND _bundled_backend_libs "${_blas_shim_dir}/openblas.lib")
+    else()
+      # Stage the real SONAME (for _core's BUILD_RPATH to resolve it in the
+      # editable/build-tree case, using cyhighs_stage_runtime_lib defined
+      # above) and the "libopenblas.so" alias find_package(BLAS) looks for.
+      cyhighs_stage_runtime_lib("${_openblas_backend}" "${_blas_shim_dir}")
+      file(COPY_FILE "${_openblas_backend}" "${_blas_shim_dir}/libopenblas.so")
+      if(_libgfortran_backend)
+        # Unlike lbt (which only depends on libdl/libc), real OpenBLAS's
+        # Fortran-compiled kernels need libgfortran resolvable at link time,
+        # not just at runtime -- confirmed by a real link failure here
+        # ("undefined reference to `_gfortran_etime'") when it was missing
+        # from this directory, since HiGHS's own BLAS detection performs a
+        # real link check, not just a file-existence check.
+        cyhighs_stage_runtime_lib("${_libgfortran_backend}" "${_blas_shim_dir}")
       endif()
     endif()
   endif()
@@ -559,10 +597,12 @@ if(CMAKE_DL_LIBS)
   target_link_libraries(_core PRIVATE ${CMAKE_DL_LIBS})
 endif()
 
-# Link the bundled OpenBLAS (+ libgfortran) into _core, so that
-# auditwheel/delvewheel see it as a normal dependency to relocate and vendor,
-# and so its transitive deps (libgfortran -> libquadmath) get pulled into the
-# wheel too. Empty (a no-op) on Apple, where HiGHS links Accelerate directly.
+# Link the bundled OpenBLAS (+ libgfortran) into _core. With CYHIGHS_USE_LBT
+# on (the default), this is only so auditwheel/delvewheel see it as a normal
+# dependency to relocate and vendor, and so its transitive deps
+# (libgfortran -> libquadmath) get pulled into the wheel too; the actual BLAS
+# calls go through lbt instead. With it off, this is the real, direct BLAS
+# link. Empty (a no-op) on Apple, where HiGHS links Accelerate directly.
 target_link_libraries(_core PRIVATE ${_bundled_backend_libs})
 
 # Make _core's own runtime dependencies loadable. This has to work in two
@@ -578,13 +618,15 @@ if(NOT APPLE)
     # unrepaired build) and install them into the package directory (for the
     # wheel, which a real CI failure showed delvewheel does not otherwise
     # populate from the build-tree shim location on its own).
+    if(CYHIGHS_USE_LBT)
+      set(_windows_runtime_dlls "${_blas_shim_dir}/blastrampoline.dll" "${_openblas_backend}")
+    else()
+      set(_windows_runtime_dlls "${_openblas_backend}")
+    endif()
     add_custom_command(TARGET _core POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${_blas_shim_dir}/blastrampoline.dll"
-        "${_openblas_backend}"
-        "$<TARGET_FILE_DIR:_core>")
-    install(FILES "${_blas_shim_dir}/blastrampoline.dll" "${_openblas_backend}"
-            DESTINATION cyhighs)
+        ${_windows_runtime_dlls} "$<TARGET_FILE_DIR:_core>")
+    install(FILES ${_windows_runtime_dlls} DESTINATION cyhighs)
   else()
     # On Linux, _core's NEEDED entries are libblastrampoline.so.5 (via HiGHS's
     # shim link) and the bundled OpenBLAS SONAME. Stage just those SONAME
@@ -601,7 +643,9 @@ if(NOT APPLE)
     set(_runtime_bundle_dir "${CMAKE_BINARY_DIR}/runtime-bundle")
     file(REMOVE_RECURSE "${_runtime_bundle_dir}")
     file(MAKE_DIRECTORY "${_runtime_bundle_dir}")
-    cyhighs_stage_runtime_lib("${_lbt_shared}" "${_runtime_bundle_dir}")
+    if(CYHIGHS_USE_LBT)
+      cyhighs_stage_runtime_lib("${_lbt_shared}" "${_runtime_bundle_dir}")
+    endif()
     foreach(_backend_lib IN LISTS _bundled_backend_libs)
       cyhighs_stage_runtime_lib("${_backend_lib}" "${_runtime_bundle_dir}")
     endforeach()
