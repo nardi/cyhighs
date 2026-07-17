@@ -59,6 +59,23 @@ Accelerate framework there, which ships with every macOS system, so lbt has
 nothing to forward and the `cyhighs[mkl]` extra has no effect (Intel has also
 never published MKL for macOS anyway).
 
+### Choosing a backend explicitly
+
+By default `cyhighs` prefers MKL when it can find it and falls back to the
+bundled OpenBLAS otherwise. Two environment variables let you override this,
+read once when `cyhighs` is imported.
+
+`CYHIGHS_LBT_PREFER` picks a backend explicitly instead of relying on the
+default preference. Set it to `mkl` to prefer MKL, falling back to OpenBLAS if
+MKL cannot be found, the same as the default. Set it to `openblas` to force
+the bundled OpenBLAS even if the `cyhighs[mkl]` extra is installed.
+
+`CYHIGHS_LBT_DEBUG` prints diagnostic information to stderr during backend
+selection, including which backend was found, whether lbt itself was located,
+and the result of the `lbt_forward` call. Set it to any non-empty value to
+enable it. This is useful for confirming which backend is active or for
+diagnosing why HiPO has no backend at all.
+
 ## Platform coverage
 
 Wheels are published for Linux x86_64 and aarch64, macOS on Apple Silicon, and
