@@ -30,6 +30,11 @@ jobs:
   test:
     name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # The benchmark tracking step pushes history to a data branch on main and
+    # comments on pull requests, so the job needs write access to both.
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -45,3 +50,29 @@ jobs:
         run: uv sync
       - name: Run tests
         run: uv run pytest
+      # Run the performance benchmarks once per operating system, reusing the
+      # extension already built above. One Python version is enough, since the
+      # benchmarks measure the compiled solver rather than the Python layer.
+      - name: Run benchmarks
+        if: matrix.python-version == '3.12'
+        run: uv run pytest benchmarks --benchmark-json=benchmark.json
+      # Compare against the stored history and comment on regressions. Each
+      # operating system tracks its own series on its own data branch, since
+      # absolute timings differ per platform and a shared branch would race when
+      # the three jobs push on main. The alert is advisory and never fails the
+      # build, because hosted runners are too noisy for a hard threshold.
+      - name: Track benchmark regressions
+        if: matrix.python-version == '3.12'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: benchmarks-${{ matrix.os }}
+          tool: pytest
+          output-file-path: benchmark.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks-${{ matrix.os }}
+          benchmark-data-dir-path: dev/bench
+          alert-threshold: "120%"
+          comment-on-alert: true
+          fail-on-alert: false
+          auto-push: ${{ github.event_name == 'push' }}
+          save-data-file: ${{ github.event_name == 'push' }}
