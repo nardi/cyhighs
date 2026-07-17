@@ -521,13 +521,30 @@ if(_needs_openblas_extension_stub)
   # forwards), because HiGHS's build believes "openblas" is a real OpenBLAS
   # (see the BLAS/LAPACK section above). A static executable that links
   # libhighs_extras.a in full cannot leave this undefined (confirmed by a
-  # real CI failure linking HiGHS's own CLI, excluded from the build above);
-  # a shared library like _core tolerates it at link time, but would crash
-  # if this ever got called at runtime. Supply a no-op definition so _core
-  # can never hit that crash. This only affects OpenBLAS's own thread-count
-  # tuning, not correctness or which real BLAS lbt forwards to.
+  # real CI failure linking HiGHS's own CLI, excluded from the build above),
+  # and a shared library like _core would crash if this ever got called at
+  # runtime with no definition at all. Rather than a no-op, forward both
+  # openblas_get_num_threads() and openblas_set_num_threads() to lbt's own
+  # lbt_get_num_threads()/lbt_set_num_threads(), which lbt already routes to
+  # whichever real backend (OpenBLAS or MKL) is currently forwarded to (lbt
+  # has built-in knowledge of both libraries' thread-control functions, see
+  # lbt_register_thread_interface() in libblastrampoline.h), so HiGHS's
+  # thread-count control keeps working regardless of the active backend.
   set(_openblas_stub_c "${CMAKE_BINARY_DIR}/openblas_extension_stub.c")
-  file(WRITE "${_openblas_stub_c}" "void openblas_set_num_threads(int num_threads) { (void)num_threads; }\n")
+  file(WRITE "${_openblas_stub_c}" [[
+#include <stdint.h>
+
+extern int32_t lbt_get_num_threads(void);
+extern void lbt_set_num_threads(int32_t num_threads);
+
+int openblas_get_num_threads(void) {
+  return (int)lbt_get_num_threads();
+}
+
+void openblas_set_num_threads(int num_threads) {
+  lbt_set_num_threads((int32_t)num_threads);
+}
+]])
   list(APPEND _core_extra_sources "${_openblas_stub_c}")
 endif()
 
