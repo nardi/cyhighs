@@ -47,6 +47,7 @@ Repository = "https://github.com/nardilam/cyhighs"
 dev = [
     "mkdocstrings-python>=2.0.5",
     "pytest>=8.0",
+    "pytest-benchmark>=4.0",
     "pytest-markdown-docs>=0.9.2",
     "ruff>=0.6",
     "stubgen-pyx>=0.2.16",
@@ -92,6 +93,8 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 # Tests do not need module and function docstrings on every item.
 "tests/*" = ["D100", "D103", "D104"]
+# The benchmark suite follows the same relaxed docstring rules as the tests.
+"benchmarks/*" = ["D103", "D104"]
 
 [tool.ty.rules]
 # scipy and the compiled extension module do not ship complete type stubs, so
