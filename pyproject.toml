@@ -6,7 +6,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "cython>=3.0",
-    "cmake>=3.24",
+    "cmake>=3.28",
     "ninja>=1.11",
 ]
 build-backend = "scikit_build_core.build"
@@ -36,6 +36,16 @@ classifiers = [
 # and scipy 1.9.2 are the first releases to publish CPython 3.11 wheels, and the
 # bindings deliberately avoid the numpy C API so there is no tighter coupling.
 dependencies = ["numpy>=1.23.2", "scipy>=1.9.2"]
+
+[project.optional-dependencies]
+# HiGHS's BLAS calls are forwarded through libblastrampoline at runtime (see
+# src/cyhighs/_blas_backend.py), so swapping in Intel MKL is just a matter of
+# having its runtime library present -- no cyhighs rebuild needed. Intel's
+# `mkl` wheel is only published for Linux x86_64 and Windows x86_64 (Intel has
+# never shipped MKL for macOS or for any ARM target), so the environment
+# marker below makes `pip install cyhighs[mkl]` fail clearly on unsupported
+# platforms instead of silently installing nothing.
+mkl = ["mkl; (platform_system == 'Linux' or platform_system == 'Windows') and platform_machine in 'x86_64 AMD64'"]
 
 [project.urls]
 Homepage = "https://github.com/nardilam/cyhighs"

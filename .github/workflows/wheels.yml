@@ -20,120 +20,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Linux wheels embed the prebuilt HiGHS static-apache archive, which is built
-  # against a recent glibc and needs glibc >= 2.38 to link. No manylinux
-  # container image provides that for x86_64, so Linux wheels are built directly
-  # on the native runners (Ubuntu 24.04 ships glibc 2.39) and repaired with
-  # auditwheel, which tags them manylinux_2_38+.
-  build_linux:
-    name: Linux ${{ matrix.os }} cp${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-24.04       # Linux x86_64
-          - ubuntu-24.04-arm   # Linux aarch64
-        python: ["3.11", "3.12", "3.13", "3.14"]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Build and repair wheel
-        run: |
-          set -euxo pipefail
-          python -m pip install --upgrade pip build auditwheel patchelf
-          python -m build --wheel --outdir dist
-          # auditwheel bundles the external libraries (libstdc++, libgcc_s,
-          # libz) into the wheel and applies the highest compatible manylinux
-          # tag for the referenced glibc symbols.
-          auditwheel repair dist/*.whl --wheel-dir wheelhouse
-
-      - name: Test the repaired wheel
-        run: |
-          set -euxo pipefail
-          python -m pip install wheelhouse/*.whl
-          python -m pip install pytest scipy pytest-markdown-docs
-          pytest "${GITHUB_WORKSPACE}/tests" "${GITHUB_WORKSPACE}/docs"
-
-      - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux-${{ matrix.os }}-cp${{ matrix.python }}
-          path: ./wheelhouse/*.whl
-
-  # Portable Linux wheels built from source inside cibuildwheel's default
-  # containers, which are manylinux_2_28 (x86_64/aarch64) and musllinux_1_2.
-  # Compiling HiGHS in the container links against the container glibc/musl, so
-  # these wheels carry the portable manylinux_2_28 / musllinux tags that the
-  # prebuilt-archive job above (glibc >= 2.38) cannot produce. A prebuilt
-  # OpenBLAS is installed into the container so only the HiGHS solver and HiPO
-  # are compiled from source.
-  build_linux_source:
-    name: Linux source ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-24.04       # x86_64 -> manylinux_2_28 + musllinux_1_2
-          - ubuntu-24.04-arm   # aarch64 -> manylinux_2_28 + musllinux_1_2
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.0
-        env:
-          # Build CPython 3.11 through 3.14. The free threaded builds are left
-          # out for now while Cython support for them is still settling.
-          CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
-          # Skip 32-bit targets. HiGHS is not viable on 32-bit and there are no
-          # 32-bit SciPy wheels for the test step.
-          CIBW_SKIP: "*_i686"
-          # Install a prebuilt OpenBLAS so only the HiGHS solver and HiPO are
-          # compiled from source. manylinux_2_28 is AlmaLinux 8 (dnf, with
-          # openblas-devel from EPEL); musllinux_1_2 is Alpine (apk, openblas-dev
-          # from the community repo). One command covers both container types.
-          CIBW_BEFORE_ALL: >-
-            if command -v dnf; then dnf install -y epel-release && dnf install -y openblas-devel;
-            elif command -v yum; then yum install -y epel-release && yum install -y openblas-devel;
-            elif command -v apk; then apk add --no-cache openblas-dev;
-            fi
-          # Build HiGHS from source (linking the prebuilt OpenBLAS above).
-          # scikit-build-core forwards CMAKE_ARGS to the cmake configure step.
-          CIBW_ENVIRONMENT: 'CMAKE_ARGS="-DCYHIGHS_HIGHS_FROM_SOURCE=ON"'
-          # Verify each freshly built wheel by running the test suite against it.
-          CIBW_TEST_REQUIRES: "pytest scipy pytest-markdown-docs"
-          CIBW_TEST_COMMAND: "pytest {project}/tests {project}/docs"
-          # scipy does not publish musllinux wheels for every CPython yet, so the
-          # in-container test install can fail there. The wheels are still built;
-          # drop this once scipy musllinux coverage is confirmed for all targets.
-          CIBW_TEST_SKIP: "*-musllinux_*"
-
-      - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux-source-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
-
-  # macOS and Windows wheels are built with cibuildwheel, which handles the
-  # per-Python builds and the delocate/delvewheel repair. glibc is not a concern
-  # on these platforms, so the prebuilt archives build in the standard images.
+  # Every wheel flavor builds the same way now (see CMakeLists.txt): HiGHS +
+  # HiPO compile from source, and OpenBLAS + libblastrampoline are fetched as
+  # prebuilt binaries. That means a single cibuildwheel job with an OS matrix
+  # covers every platform, with cibuildwheel picking the right container
+  # (manylinux_2_28/musllinux_1_2 on Linux) or native toolchain (macOS,
+  # Windows) per matrix entry.
   build_wheels:
-    name: Wheels on ${{ matrix.os }}
+    name: Wheels on ${{ matrix.os }}${{ matrix.variant == 'static' && ' (static)' || '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
+          - ubuntu-24.04       # Linux x86_64 -> manylinux_2_28 + musllinux_1_2
+          - ubuntu-24.04-arm   # Linux aarch64 -> manylinux_2_28 + musllinux_1_2
           - macos-latest       # macOS arm64
           - windows-latest     # Windows AMD64
+        # The "static" variant builds with CYHIGHS_USE_LBT=OFF (see
+        # CMakeLists.txt): OpenBLAS linked directly, with no libblastrampoline
+        # forwarding layer in between. It is excluded on macOS, where the flag
+        # has no effect at all (HiGHS always links Accelerate directly there),
+        # so it would just duplicate the default build.
+        variant: [default, static]
+        exclude:
+          - os: macos-latest
+            variant: static
     steps:
       - uses: actions/checkout@v4
+
+      # The static variant is not published to PyPI (see "Static (no lbt)
+      # wheels" in docs/guide/bundling.md): PyPI does not let two wheels with
+      # the same name, version, and platform tag coexist for users to choose
+      # between, pip would just pick one. Give it a PEP 440 local version
+      # segment instead, the same mechanism PyTorch uses for its CUDA/CPU
+      # variant wheels, so it is only ever installed when asked for by exact
+      # file or URL. Matching this in pyproject.toml itself, rather than
+      # renaming the wheel after the fact, keeps the wheel's filename and its
+      # internal metadata consistent.
+      - name: Tag the static variant's version
+        if: matrix.variant == 'static'
+        # Explicit bash, not the default pwsh on Windows runners: pwsh parses
+        # this whole block as PowerShell script rather than passing it
+        # through, and its escaping rules differ from bash's (a real CI
+        # failure: pwsh treated \" inside the python -c string as a literal
+        # backslash followed by a real string terminator, not an escaped
+        # quote, and failed to parse the script at all).
+        shell: bash
+        run: |
+          python3 -c "
+          import pathlib, re
+          path = pathlib.Path('pyproject.toml')
+          text = path.read_text()
+          new_text, count = re.subn(
+              r'(?m)^version = \"(\d[^\"]*)\"', r'version = \"\1+static\"', text, count=1)
+          assert count == 1, 'expected exactly one project.version line to update'
+          path.write_text(new_text)
+          "
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.0
@@ -142,21 +85,37 @@ jobs:
           # out for now while Cython support for them is still settling.
           CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
           # Skip 32-bit targets. HiGHS is not viable on 32-bit and there are no
-          # 32-bit SciPy wheels for the test step.
+          # 32-bit SciPy wheels for the test step. "*-win32" is a no-op outside
+          # the Windows matrix entry.
           CIBW_SKIP: "*_i686 *-win32"
-          # HiGHS is C++17. macOS arm64 requires a deployment target of at least
-          # 11.0 for the C++17 standard library features HiGHS relies on.
+          # HiGHS is C++17. macOS arm64 requires a deployment target of at
+          # least 11.0 for the C++17 standard library features HiGHS relies
+          # on. Unused outside the macOS matrix entry.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-          # Verify each freshly built wheel by running the test suite against it.
-          # pytest-markdown-docs is required because the project addopts enable it,
-          # and it lets the documentation examples run against the built wheel too.
+          # Verify each freshly built wheel by running the test suite against
+          # it. pytest-markdown-docs is required because the project addopts
+          # enable it, and it lets the documentation examples run against the
+          # built wheel too.
           CIBW_TEST_REQUIRES: "pytest scipy pytest-markdown-docs"
           CIBW_TEST_COMMAND: "pytest {project}/tests {project}/docs"
+          # scipy does not publish musllinux wheels for every CPython yet, so
+          # the in-container test install can fail there. The wheels are
+          # still built; drop this once scipy musllinux coverage is confirmed
+          # for all targets. Unused outside the Linux matrix entries.
+          CIBW_TEST_SKIP: "*-musllinux_*"
+          # conda-forge (CMakeLists.txt's default OpenBLAS source) only ships
+          # glibc binaries, so the musllinux_1_2 container needs its own,
+          # Alpine-native OpenBLAS instead, found via find_library. The
+          # _LINUX suffix means cibuildwheel only runs this for the Linux
+          # matrix entries; within those, it's a no-op in the manylinux_2_28
+          # container, which has no apk.
+          CIBW_BEFORE_ALL_LINUX: "command -v apk && apk add --no-cache openblas-dev || true"
+          CIBW_CONFIG_SETTINGS: ${{ matrix.variant == 'static' && 'cmake.define.CYHIGHS_USE_LBT=OFF' || '' }}
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
+          name: ${{ matrix.variant == 'static' && 'static-wheels' || 'wheels' }}-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -176,7 +135,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build_linux, build_linux_source, build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist]
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     environment:
@@ -199,3 +158,25 @@ jobs:
           merge-multiple: true
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish_static_wheels:
+    name: Attach static wheels to the release
+    needs: build_wheels
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download static wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: static-wheels-*
+          path: static-wheels
+          merge-multiple: true
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release upload "${{ github.event.release.tag_name }}"
+          static-wheels/*.whl
+          --repo "${{ github.repository }}"

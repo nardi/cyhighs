@@ -53,7 +53,9 @@ jobs:
       # Run the performance benchmarks once per operating system, reusing the
       # extension already built above. One Python version is enough, since the
       # benchmarks measure the compiled solver rather than the Python layer.
-      - name: Run benchmarks
+      # This first run uses the bundled OpenBLAS, since the mkl extra is not
+      # installed yet.
+      - name: Run benchmarks (OpenBLAS)
         if: matrix.python-version == '3.12'
         run: uv run pytest benchmarks --benchmark-json=benchmark.json
       # Compare against the stored history and comment on regressions. Each
@@ -61,7 +63,7 @@ jobs:
       # absolute timings differ per platform and a shared branch would race when
       # the three jobs push on main. The alert is advisory and never fails the
       # build, because hosted runners are too noisy for a hard threshold.
-      - name: Track benchmark regressions
+      - name: Track benchmark regressions (OpenBLAS)
         if: matrix.python-version == '3.12'
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -70,6 +72,65 @@ jobs:
           output-file-path: benchmark.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: benchmarks-${{ matrix.os }}
+          benchmark-data-dir-path: dev/bench
+          alert-threshold: "120%"
+          comment-on-alert: true
+          fail-on-alert: false
+          auto-push: ${{ github.event_name == 'push' }}
+          save-data-file: ${{ github.event_name == 'push' }}
+      # Also benchmark against MKL, on the platforms it is published for (the
+      # cyhighs[mkl] extra has no effect on macOS, see the bundling guide).
+      # Reinstalling does not rebuild the extension, since the backend is
+      # chosen at import time rather than at compile time.
+      - name: Install the mkl extra
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        run: uv sync --extra mkl
+      - name: Run benchmarks (MKL)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        env:
+          CYHIGHS_LBT_PREFER: mkl
+        run: uv run pytest benchmarks --benchmark-json=benchmark-mkl.json
+      - name: Track benchmark regressions (MKL)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: benchmarks-${{ matrix.os }}-mkl
+          tool: pytest
+          output-file-path: benchmark-mkl.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks-${{ matrix.os }}-mkl
+          benchmark-data-dir-path: dev/bench
+          alert-threshold: "120%"
+          comment-on-alert: true
+          fail-on-alert: false
+          auto-push: ${{ github.event_name == 'push' }}
+          save-data-file: ${{ github.event_name == 'push' }}
+      # Also benchmark the "static" variant (CYHIGHS_USE_LBT=OFF, see
+      # CMakeLists.txt): OpenBLAS linked directly, with no libblastrampoline
+      # forwarding layer in between. This is a compile-time flag, unlike MKL
+      # above, so it needs a real rebuild; a separate build-dir keeps that
+      # from reusing the lbt-enabled build's CMake cache. Not run on macOS,
+      # where CYHIGHS_USE_LBT has no effect at all (HiGHS always links
+      # Accelerate directly there), so it would just duplicate the OpenBLAS
+      # benchmark above.
+      - name: Install the static (no lbt) variant
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        run: >
+          uv sync
+          --config-settings=cmake.define.CYHIGHS_USE_LBT=OFF
+          --config-settings=build-dir=build-static
+      - name: Run benchmarks (static)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        run: uv run pytest benchmarks --benchmark-json=benchmark-static.json
+      - name: Track benchmark regressions (static)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: benchmarks-${{ matrix.os }}-static
+          tool: pytest
+          output-file-path: benchmark-static.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks-${{ matrix.os }}-static
           benchmark-data-dir-path: dev/bench
           alert-threshold: "120%"
           comment-on-alert: true

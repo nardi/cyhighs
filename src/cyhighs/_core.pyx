@@ -17,6 +17,8 @@ particular NumPy binary version.
 
 import numpy as np
 
+cimport cython
+
 from ._highs_c_api cimport (
     Highs_create,
     Highs_destroy,
@@ -99,6 +101,8 @@ def highs_infinity():
         Highs_destroy(highs)
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def merge_constraint_matrices_csc(
     HighsInt number_of_columns,
     double[::1] inequality_values not None,
