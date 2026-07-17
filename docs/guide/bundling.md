@@ -76,6 +76,32 @@ and the result of the `lbt_forward` call. Set it to any non-empty value to
 enable it. This is useful for confirming which backend is active or for
 diagnosing why HiPO has no backend at all.
 
+### Static (no lbt) wheels
+
+The published wheels always go through lbt on Linux and Windows, as described
+above. A second, unpublished build exists for comparison, controlled by the
+CMake option `CYHIGHS_USE_LBT`. With it off, HiGHS links the bundled OpenBLAS
+directly and there is no lbt anywhere in the process at all. This is meant for
+measuring whether lbt's forwarding adds any overhead, not for everyday use.
+`CYHIGHS_LBT_PREFER`, `CYHIGHS_LBT_DEBUG`, and the `cyhighs[mkl]` extra all
+have no effect on this build, since there is no lbt left to configure. It is
+also skipped on macOS, where `CYHIGHS_USE_LBT` has no effect at all, since
+HiGHS already links Accelerate directly there.
+
+These static wheels are not published to PyPI. PyPI does not let two wheels
+with the same name, version, and platform tag coexist for `pip` to choose
+between, so a plain `pip install cyhighs` always gets the default,
+lbt-forwarded build. Instead, static wheels are attached directly to each
+[GitHub release](https://github.com/nardilam/cyhighs/releases) for Linux and
+Windows, with a `+static` local version segment in the filename (the same
+scheme PyTorch uses for its CUDA and CPU wheel variants) so they never get
+picked up by a normal install. Install one by pointing `pip` at its release
+asset URL directly.
+
+```bash
+pip install https://github.com/nardilam/cyhighs/releases/download/v0.2.2/cyhighs-0.2.2+static-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+```
+
 ## Platform coverage
 
 Wheels are published for Linux x86_64 and aarch64, macOS on Apple Silicon, and

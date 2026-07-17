@@ -27,7 +27,7 @@ jobs:
   # (manylinux_2_28/musllinux_1_2 on Linux) or native toolchain (macOS,
   # Windows) per matrix entry.
   build_wheels:
-    name: Wheels on ${{ matrix.os }}
+    name: Wheels on ${{ matrix.os }}${{ matrix.variant == 'static' && ' (static)' || '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,8 +37,39 @@ jobs:
           - ubuntu-24.04-arm   # Linux aarch64 -> manylinux_2_28 + musllinux_1_2
           - macos-latest       # macOS arm64
           - windows-latest     # Windows AMD64
+        # The "static" variant builds with CYHIGHS_USE_LBT=OFF (see
+        # CMakeLists.txt): OpenBLAS linked directly, with no libblastrampoline
+        # forwarding layer in between. It is excluded on macOS, where the flag
+        # has no effect at all (HiGHS always links Accelerate directly there),
+        # so it would just duplicate the default build.
+        variant: [default, static]
+        exclude:
+          - os: macos-latest
+            variant: static
     steps:
       - uses: actions/checkout@v4
+
+      # The static variant is not published to PyPI (see "Static (no lbt)
+      # wheels" in docs/guide/bundling.md): PyPI does not let two wheels with
+      # the same name, version, and platform tag coexist for users to choose
+      # between, pip would just pick one. Give it a PEP 440 local version
+      # segment instead, the same mechanism PyTorch uses for its CUDA/CPU
+      # variant wheels, so it is only ever installed when asked for by exact
+      # file or URL. Matching this in pyproject.toml itself, rather than
+      # renaming the wheel after the fact, keeps the wheel's filename and its
+      # internal metadata consistent.
+      - name: Tag the static variant's version
+        if: matrix.variant == 'static'
+        run: |
+          python3 -c "
+          import pathlib, re
+          path = pathlib.Path('pyproject.toml')
+          text = path.read_text()
+          new_text, count = re.subn(
+              r'(?m)^version = \"(\d[^\"]*)\"', r'version = \"\1+static\"', text, count=1)
+          assert count == 1, 'expected exactly one project.version line to update'
+          path.write_text(new_text)
+          "
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.0
@@ -72,11 +103,12 @@ jobs:
           # matrix entries; within those, it's a no-op in the manylinux_2_28
           # container, which has no apk.
           CIBW_BEFORE_ALL_LINUX: "command -v apk && apk add --no-cache openblas-dev || true"
+          CIBW_CONFIG_SETTINGS: ${{ matrix.variant == 'static' && 'cmake.define.CYHIGHS_USE_LBT=OFF' || '' }}
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
+          name: ${{ matrix.variant == 'static' && 'static-wheels' || 'wheels' }}-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -119,3 +151,25 @@ jobs:
           merge-multiple: true
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish_static_wheels:
+    name: Attach static wheels to the release
+    needs: build_wheels
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download static wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: static-wheels-*
+          path: static-wheels
+          merge-multiple: true
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release upload "${{ github.event.release.tag_name }}"
+          static-wheels/*.whl
+          --repo "${{ github.repository }}"
