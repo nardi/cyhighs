@@ -163,8 +163,20 @@ def configure_blas_backend() -> None:
         return
 
     debug = bool(os.environ.get("CYHIGHS_LBT_DEBUG"))
+    preferred_backend = str(os.environ.get("CYHIGHS_LBT_PREFER"))
 
-    backend = _locate_mkl() or _locate_bundled_openblas()
+    mkl = _locate_mkl()
+    openblas = _locate_bundled_openblas()
+
+    # Select the backend based on user preference, or by default, prefer MKL if
+    # installed.
+    if preferred_backend.lower() == "mkl":
+        backend = mkl or openblas
+    elif preferred_backend.lower() == "openblas":
+        backend = openblas
+    else:
+        backend = mkl or openblas
+
     lbt = _open_loaded_lbt()
     if debug:
         print(f"cyhighs: BLAS backend={backend!r} lbt={lbt!r}", file=sys.stderr)
