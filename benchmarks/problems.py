@@ -92,13 +92,7 @@ class Problem:
 
     def linprog_kwargs(self) -> dict:
         """Return keyword arguments for the SciPy compatible linprog."""
-        bounds = list(
-            zip(
-                self.variable_lower_bounds.tolist(),
-                self.variable_upper_bounds.tolist(),
-                strict=True,
-            )
-        )
+        bounds = np.stack([self.variable_lower_bounds, self.variable_upper_bounds], axis=1)
         return {
             "c": self.objective,
             "A_ub": self.inequality_matrix,

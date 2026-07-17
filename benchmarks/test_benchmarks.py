@@ -19,40 +19,47 @@ from .problems import make_problem
 _LP_SIZES = [100, 1000, 10000]
 _MIP_SIZES = [100, 1000]
 
-# The three public interfaces, each paired with the adapter that shapes a
-# Problem into that interface's keyword arguments.
-_INTERFACES = {
-    "array": (solve_linear_problem, "array_kwargs"),
-    "sparse": (solve_linear_problem_sparse, "sparse_kwargs"),
-    "linprog": (linprog, "linprog_kwargs"),
-}
+# One params list drives the problem fixture below. Each entry is a
+# (mixed_integer, number_of_variables) pair, with a matching test id such as
+# "lp-100" or "mip-1000" so failures are easy to identify.
+_PROBLEM_PARAMS = [(False, n) for n in _LP_SIZES] + [(True, n) for n in _MIP_SIZES]
+_PROBLEM_IDS = [f"mip-{n}" if mixed_integer else f"lp-{n}" for mixed_integer, n in _PROBLEM_PARAMS]
+
+# Keyword arguments passed to every benchmark.pedantic call below. A fixed
+# round count keeps every benchmark comparable and avoids pytest-benchmark's
+# own calibration, which would run a variable number of rounds per test. Ten
+# rounds tightens the statistics without letting the largest problems, which
+# already take several seconds per solve, blow up the total CI time.
+_PEDANTIC_KWARGS = {"rounds": 10, "iterations": 1, "warmup_rounds": 1}
 
 
-def _assert_optimal(interface_name, result):
-    """Assert that the solve succeeded for the given interface's result type."""
-    if interface_name == "linprog":
-        assert result.success
-    else:
-        assert result.is_optimal
+@pytest.fixture(params=_PROBLEM_PARAMS, ids=_PROBLEM_IDS)
+def problem(request):
+    """Build the LP or MIP problem for the requested size.
+
+    Parametrized over every (mixed_integer, number_of_variables) pair in
+    _PROBLEM_PARAMS, so each test function below runs once per size.
+    """
+    mixed_integer, number_of_variables = request.param
+    return make_problem(number_of_variables, mixed_integer=mixed_integer)
 
 
-def _run(benchmark, interface_name, problem):
-    """Time only the solve, building the problem kwargs outside the timed block."""
-    solve, adapter = _INTERFACES[interface_name]
-    kwargs = getattr(problem, adapter)()
-    result = benchmark.pedantic(solve, kwargs=kwargs, rounds=5, iterations=1, warmup_rounds=1)
-    _assert_optimal(interface_name, result)
+def test_array_solve(benchmark, problem):
+    """Benchmark solve_linear_problem, the raw CSC array interface."""
+    kwargs = problem.array_kwargs()
+    result = benchmark.pedantic(solve_linear_problem, kwargs=kwargs, **_PEDANTIC_KWARGS)
+    assert result.is_optimal
 
 
-@pytest.mark.parametrize("interface_name", list(_INTERFACES))
-@pytest.mark.parametrize("number_of_variables", _LP_SIZES)
-def test_lp_solve(benchmark, interface_name, number_of_variables):
-    problem = make_problem(number_of_variables, mixed_integer=False)
-    _run(benchmark, interface_name, problem)
+def test_sparse_solve(benchmark, problem):
+    """Benchmark solve_linear_problem_sparse, the SciPy sparse matrix interface."""
+    kwargs = problem.sparse_kwargs()
+    result = benchmark.pedantic(solve_linear_problem_sparse, kwargs=kwargs, **_PEDANTIC_KWARGS)
+    assert result.is_optimal
 
 
-@pytest.mark.parametrize("interface_name", list(_INTERFACES))
-@pytest.mark.parametrize("number_of_variables", _MIP_SIZES)
-def test_mip_solve(benchmark, interface_name, number_of_variables):
-    problem = make_problem(number_of_variables, mixed_integer=True)
-    _run(benchmark, interface_name, problem)
+def test_linprog_solve(benchmark, problem):
+    """Benchmark linprog, the SciPy compatible interface."""
+    kwargs = problem.linprog_kwargs()
+    result = benchmark.pedantic(linprog, kwargs=kwargs, **_PEDANTIC_KWARGS)
+    assert result.success
