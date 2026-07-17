@@ -60,6 +60,13 @@ jobs:
       # internal metadata consistent.
       - name: Tag the static variant's version
         if: matrix.variant == 'static'
+        # Explicit bash, not the default pwsh on Windows runners: pwsh parses
+        # this whole block as PowerShell script rather than passing it
+        # through, and its escaping rules differ from bash's (a real CI
+        # failure: pwsh treated \" inside the python -c string as a literal
+        # backslash followed by a real string terminator, not an escaped
+        # quote, and failed to parse the script at all).
+        shell: bash
         run: |
           python3 -c "
           import pathlib, re
