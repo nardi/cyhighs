@@ -3,104 +3,81 @@
 A binding to a C++ library usually forces a choice on its users. Either they
 install the library themselves and hope the version matches, or the binding
 ships a copy. `cyhighs` takes the second path and makes it invisible. HiGHS is
-linked statically into the extension, so a `cyhighs` wheel already contains the
+bundled alongside the extension, so a `cyhighs` wheel already contains the
 solver. There is no separate HiGHS to install and no system package to keep in
 sync.
 
 ## The build
 
-The build is driven by
-[scikit-build-core](https://scikit-build-core.readthedocs.io/), which runs a
-CMake build behind the standard Python packaging interface. CMake compiles
-HiGHS and HiPO from source (via `FetchContent`) at a pinned version, currently
-1.15.1, on every platform. Because the version is pinned, every wheel is built
-against a known solver, and the Python enumerations in `cyhighs` are
-transcribed from that same release.
+The build is driven by [meson](https://mesonbuild.com/) through the
+[meson-python](https://mesonbuild.com/meson-python/) backend. Rather than
+compiling HiGHS from source, `cyhighs` links against
+[HiGHS_jll](https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl), a prebuilt
+binary of HiGHS published for the Julia ecosystem, brought into the Meson
+build through [meson-jll](https://nardi.github.io/meson-jll/meson_jll/index.html).
+A plain `dependency('HiGHS')` in `meson.build` resolves, at setup time, to
+whichever platform tarball matches the host, and meson-python folds the
+resulting shared libraries into the wheel. Because the version is pinned by
+the JLL release used, every wheel is built against a known solver, and the
+Python enumerations in `cyhighs` are transcribed from that same release.
 
-The Cython source is transpiled to C and compiled against the HiGHS headers.
-The binding deliberately avoids the NumPy C API. It moves array data across the
-boundary using typed memoryviews and the buffer protocol only, which keeps the
-compiled surface small and the dependency on NumPy loose.
+The Cython source is transpiled to C and compiled against the HiGHS headers
+that ship inside the JLL tarball. The binding deliberately avoids the NumPy C
+API. It moves array data across the boundary using typed memoryviews and the
+buffer protocol only, which keeps the compiled surface small and the
+dependency on NumPy loose.
 
 ## The BLAS backend: libblastrampoline
 
-HiPO, HiGHS's interior-point solver, needs a BLAS/LAPACK implementation. On
-Linux and Windows, instead of linking one directly, `cyhighs` links HiGHS
-against
+HiPO, HiGHS's interior-point solver, needs a BLAS/LAPACK implementation.
+HiGHS_jll links
 [libblastrampoline](https://github.com/JuliaLinearAlgebra/libblastrampoline)
-(lbt). This is a small shared library, originally built for the Julia
-ecosystem, that implements the standard BLAS/LAPACK ABI and forwards every
-call, at runtime, to whichever real implementation lbt has been pointed at.
-Once the compiled extension (and therefore lbt) is loaded, `cyhighs`'s own
-`__init__.py` calls lbt's `lbt_forward` C API to register a backend:
+(lbt) for this on every platform, including macOS. lbt is a small shared
+library, originally built for the Julia ecosystem, that implements the
+standard BLAS/LAPACK ABI and forwards every call, at runtime, to whichever
+real implementation lbt has been pointed at. Once the compiled extension (and
+therefore lbt) is loaded, `cyhighs`'s own `__init__.py` calls lbt's
+`lbt_forward` C API to register the first available backend from this order of
+preference:
 
-- by default, a prebuilt OpenBLAS bundled inside the wheel, so installing
-  `cyhighs` still gives you a fully working solver with no configuration and no
-  external dependencies
-- Intel MKL instead, if the optional `cyhighs[mkl]` extra is installed and
-  MKL's runtime library can be found
+- Apple's Accelerate framework, on macOS, which ships with the OS and is
+  faster there than a bundled OpenBLAS
+- Intel MKL, if the optional `cyhighs[mkl]` extra is installed and MKL's
+  runtime library can be found
+- otherwise a prebuilt OpenBLAS bundled inside the wheel (from
+  [OpenBLAS32_jll](https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl),
+  the same LP64 build HiGHS.jl itself depends on, and the same way HiGHS
+  itself is bundled), so installing `cyhighs` gives you a fully working solver
+  with no configuration and no external dependencies
 
+The bundled OpenBLAS ships on every platform, including macOS, so there is
+always a working fallback even where Accelerate is the preferred choice.
 Because the switch happens at import time rather than at compile time, going
-from the bundled OpenBLAS to MKL (or back) never requires reinstalling
-`cyhighs`. If the `LBT_DEFAULT_LIBS` environment variable is already set when
-`cyhighs` is imported, it is left alone, so you can also point HiGHS at any
-other lbt-compatible BLAS build yourself.
+between backends never requires reinstalling `cyhighs`. If the
+`LBT_DEFAULT_LIBS` environment variable is already set when `cyhighs` is
+imported, it is left alone, so you can also point HiGHS at any other
+lbt-compatible BLAS build yourself.
 
-CMake never compiles OpenBLAS itself. Both lbt and the bundled OpenBLAS are
-fetched as prebuilt binaries and verified against pinned checksums, the same
-way the HiGHS source is fetched at a pinned version. lbt comes from
-JuliaBinaryWrappers' releases on every platform. The bundled OpenBLAS comes
-from conda-forge, except on the portable `musllinux_1_2` (Alpine) Linux
-wheels, where conda-forge has no build to offer and Alpine's own OpenBLAS
-package is used instead.
-
-On macOS, none of this applies. HiGHS links directly against Apple's
-Accelerate framework there, which ships with every macOS system, so lbt has
-nothing to forward and the `cyhighs[mkl]` extra has no effect (Intel has also
-never published MKL for macOS anyway).
+Neither HiGHS, lbt, nor OpenBLAS is compiled by this project. All three are
+fetched as prebuilt JLL binaries, covering Linux (including the portable
+`musllinux_1_2`/Alpine target), macOS, and Windows alike.
 
 ### Choosing a backend explicitly
 
-By default `cyhighs` prefers MKL when it can find it and falls back to the
-bundled OpenBLAS otherwise. Two environment variables let you override this,
-read once when `cyhighs` is imported.
+Two environment variables override the default preference, read once when
+`cyhighs` is imported.
 
-`CYHIGHS_LBT_PREFER` picks a backend explicitly instead of relying on the
-default preference. Set it to `mkl` to prefer MKL, falling back to OpenBLAS if
-MKL cannot be found, the same as the default. Set it to `openblas` to force
-the bundled OpenBLAS even if the `cyhighs[mkl]` extra is installed.
+`CYHIGHS_LBT_PREFER` moves one backend to the front of the order above. Set it
+to `accelerate`, `mkl`, or `openblas`. If the named backend cannot be found
+(for example `mkl` without the `cyhighs[mkl]` extra, or `accelerate` off
+macOS), selection falls through to the remaining backends in their normal
+order.
 
 `CYHIGHS_LBT_DEBUG` prints diagnostic information to stderr during backend
-selection, including which backend was found, whether lbt itself was located,
-and the result of the `lbt_forward` call. Set it to any non-empty value to
-enable it. This is useful for confirming which backend is active or for
-diagnosing why HiPO has no backend at all.
-
-### Static (no lbt) wheels
-
-The published wheels always go through lbt on Linux and Windows, as described
-above. A second, unpublished build exists for comparison, controlled by the
-CMake option `CYHIGHS_USE_LBT`. With it off, HiGHS links the bundled OpenBLAS
-directly and there is no lbt anywhere in the process at all. This is meant for
-measuring whether lbt's forwarding adds any overhead, not for everyday use.
-`CYHIGHS_LBT_PREFER`, `CYHIGHS_LBT_DEBUG`, and the `cyhighs[mkl]` extra all
-have no effect on this build, since there is no lbt left to configure. It is
-also skipped on macOS, where `CYHIGHS_USE_LBT` has no effect at all, since
-HiGHS already links Accelerate directly there.
-
-These static wheels are not published to PyPI. PyPI does not let two wheels
-with the same name, version, and platform tag coexist for `pip` to choose
-between, so a plain `pip install cyhighs` always gets the default,
-lbt-forwarded build. Instead, static wheels are attached directly to each
-[GitHub release](https://github.com/nardilam/cyhighs/releases) for Linux and
-Windows, with a `+static` local version segment in the filename (the same
-scheme PyTorch uses for its CUDA and CPU wheel variants) so they never get
-picked up by a normal install. Install one by pointing `pip` at its release
-asset URL directly.
-
-```bash
-pip install https://github.com/nardilam/cyhighs/releases/download/v0.2.2/cyhighs-0.2.2+static-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-```
+selection, including which backend was chosen and the result of the
+`lbt_forward` call. Set it to any non-empty value to enable it. This is useful
+for confirming which backend is active or for diagnosing why HiPO has no
+backend at all.
 
 ## Platform coverage
 
@@ -113,18 +90,22 @@ target.
 ## Licensing
 
 Because the bundled build includes HiPO, which carries Apache-licensed
-dependencies, `cyhighs` is released under the Apache License 2.0. The upstream
-HiGHS license and notices are included in the wheels for attribution.
-libblastrampoline is MIT licensed, and the bundled OpenBLAS is BSD licensed.
-Both are dynamically linked, and neither imposes further obligations on
-`cyhighs` itself.
+dependencies, `cyhighs` is released under the Apache License 2.0.
+libblastrampoline is MIT licensed, and OpenBLAS is BSD licensed. HiGHS itself
+is Apache 2.0 licensed. All three are dynamically linked, and none imposes
+further obligations on `cyhighs` itself beyond preserving attribution.
+
+The upstream HiGHS license text ships inside the HiGHS_jll tarball
+(`share/licenses/HiGHS/LICENSE.txt`), but the build does not currently copy it
+into the wheel automatically. This is a known gap left by the move away from
+building HiGHS from a locally fetched source tree, tracked as follow-up work,
+not a deliberate omission.
 
 ## What this means for you
 
-Because HiGHS is statically linked and the BLAS backend it needs is bundled
-alongside it, installing `cyhighs` gives you a working solver immediately, with
-nothing further to install. You can confirm which HiGHS version you have by
-asking the library directly.
+Because HiGHS is bundled alongside the extension, installing `cyhighs` gives
+you a working solver immediately, with nothing further to install. You can
+confirm which HiGHS version you have by asking the library directly.
 
 ```python
 from cyhighs import highs_version

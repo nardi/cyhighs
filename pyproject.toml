@@ -1,15 +1,21 @@
 [build-system]
-# scikit-build-core drives a CMake build so that we can compile the HiGHS C++
-# library from source and link our Cython extension against it. Cython transpiles
-# the .pyx source to C, and cmake plus ninja are pulled in as PyPI wheels so that
-# no system level build tools other than a C and C++ compiler are required.
-requires = [
-    "scikit-build-core>=0.10",
-    "cython>=3.0",
-    "cmake>=3.28",
-    "ninja>=1.11",
-]
-build-backend = "scikit_build_core.build"
+# meson-python drives a Meson build. HiGHS is linked as a prebuilt binary
+# through the HiGHS_jll Julia package (see meson.build and subprojects/), so
+# no C++ compiler or HiGHS source compile is required, only a C compiler for
+# our own Cython-generated extension. Meson transpiles the .pyx source to C
+# directly (see meson.build's cython_args), and meson plus ninja are pulled
+# in as PyPI wheels through meson-python.
+requires = ["meson-python>=0.16", "cython>=3.0"]
+build-backend = "mesonpy"
+
+[tool.meson-python]
+# Windows has no RPATH equivalent, so meson-python cannot point _core at the
+# JLL-provided runtime DLLs (libhighs, libblastrampoline, the bundled
+# OpenBLAS, libgfortran) the way it does automatically on Linux/macOS.
+# Opting in here hands that responsibility to cyhighs itself: __init__.py
+# calls os.add_dll_directory() to extend the DLL search path before
+# importing _core, see the comment there.
+allow-windows-internal-shared-libs = true
 
 [project]
 name = "cyhighs"
@@ -53,9 +59,19 @@ Repository = "https://github.com/nardilam/cyhighs"
 
 [dependency-groups]
 # Development tooling. ruff handles both formatting and linting, ty performs
-# static type checking, and pytest runs the test suite.
+# static type checking, and pytest runs the test suite. meson and ninja are
+# also needed here, not only as build-system requirements: a meson-python
+# editable install re-runs `meson compile` on every import to pick up source
+# changes, and that subprocess call resolves `meson` from whatever is on PATH
+# in this environment, not from the isolated build environment used for the
+# initial build. Without a matching meson here, that rebuild either fails to
+# find meson at all or, worse, finds an unrelated system-wide install whose
+# version does not match the one that configured the build directory.
 dev = [
+    "meson>=1.2.3",
+    "meson-python>=0.16",
     "mkdocstrings-python>=2.0.5",
+    "ninja>=1.11",
     "pytest>=8.0",
     "pytest-benchmark>=4.0",
     "pytest-markdown-docs>=0.9.2",
@@ -65,16 +81,13 @@ dev = [
     "zensical>=0.0.50",
 ]
 
-[tool.scikit-build]
-# Use the modern metadata directory layout and always rebuild the extension in
-# editable installs so that source changes are picked up.
-build-dir = "build/{wheel_tag}"
-wheel.packages = ["src/cyhighs"]
-minimum-version = "0.10"
-
-[tool.scikit-build.cmake]
-version = ">=3.24"
-build-type = "Release"
+[tool.uv]
+# Build cyhighs itself using this same environment's meson/ninja/cython
+# rather than a separate isolated build environment, so the meson version
+# that configures the build directory is guaranteed to be the same one the
+# editable install's rebuild-on-import hook later calls, see the dev group
+# comment above.
+no-build-isolation-package = ["cyhighs"]
 
 [tool.pytest.ini_options]
 # The docs directory is included so that the Markdown code examples are collected
@@ -87,6 +100,10 @@ addopts = "-ra --markdown-docs --markdown-docs-syntax=superfences"
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+# subprojects/packagefiles holds meson-jll's generated per-platform meson.build
+# overlays and helper scripts (see meson-jll.lock), not code this project
+# authors or maintains.
+extend-exclude = ["subprojects"]
 
 [tool.ruff.lint]
 # Enable a broad, useful rule set. E and W are pycodestyle, F is pyflakes, I is

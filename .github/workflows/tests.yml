@@ -105,35 +105,3 @@ jobs:
           fail-on-alert: false
           auto-push: ${{ github.event_name == 'push' }}
           save-data-file: ${{ github.event_name == 'push' }}
-      # Also benchmark the "static" variant (CYHIGHS_USE_LBT=OFF, see
-      # CMakeLists.txt): OpenBLAS linked directly, with no libblastrampoline
-      # forwarding layer in between. This is a compile-time flag, unlike MKL
-      # above, so it needs a real rebuild; a separate build-dir keeps that
-      # from reusing the lbt-enabled build's CMake cache. Not run on macOS,
-      # where CYHIGHS_USE_LBT has no effect at all (HiGHS always links
-      # Accelerate directly there), so it would just duplicate the OpenBLAS
-      # benchmark above.
-      - name: Install the static (no lbt) variant
-        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
-        run: >
-          uv sync
-          --config-settings=cmake.define.CYHIGHS_USE_LBT=OFF
-          --config-settings=build-dir=build-static
-      - name: Run benchmarks (static)
-        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
-        run: uv run pytest benchmarks --benchmark-json=benchmark-static.json
-      - name: Track benchmark regressions (static)
-        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: benchmarks-${{ matrix.os }}-static
-          tool: pytest
-          output-file-path: benchmark-static.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-pages-branch: benchmarks-${{ matrix.os }}-static
-          benchmark-data-dir-path: dev/bench
-          alert-threshold: "120%"
-          comment-on-alert: true
-          fail-on-alert: false
-          auto-push: ${{ github.event_name == 'push' }}
-          save-data-file: ${{ github.event_name == 'push' }}

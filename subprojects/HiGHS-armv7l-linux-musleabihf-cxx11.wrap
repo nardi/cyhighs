@@ -1,0 +1,10 @@
+# This platform's tarball, straight from the JLL's own release assets.
+[wrap-file]
+directory = HiGHS-armv7l-linux-musleabihf-cxx11
+source_url = https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases/download/HiGHS-v1.15.1+0/HiGHS.v1.15.1.armv7l-linux-musleabihf-cxx11.tar.gz
+source_filename = HiGHS.v1.15.1.armv7l-linux-musleabihf-cxx11.tar.gz
+source_hash = 853b76c23e7c01c412175f993169f3ac68f96771e26b83be07c14db626c0e078
+# The JLL's tarballs are flat archives with no leading directory.
+lead_directory_missing = true
+# Drops in the meson.build this platform's tarball does not ship.
+patch_directory = HiGHS-armv7l-linux-musleabihf-cxx11

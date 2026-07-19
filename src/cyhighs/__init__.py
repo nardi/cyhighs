@@ -22,12 +22,19 @@ reductions addressed by
 
 from __future__ import annotations
 
-from ._blas_backend import configure_blas_backend
-from ._core import highs_infinity, highs_version
+from ._blas_backend import add_windows_dll_directories, configure_blas_backend
+
+# Windows has no RPATH equivalent, so `_core`'s JLL-provided runtime DLLs
+# (HiGHS, libblastrampoline, the bundled OpenBLAS, ...) are not found
+# automatically the way they are on Linux/macOS. Must run before `_core` is
+# imported at all.
+add_windows_dll_directories()
+
+from ._core import highs_infinity, highs_version  # noqa: E402
 
 # Importing _core loads libblastrampoline; point it at cyhighs's BLAS backend
-# (bundled OpenBLAS, or MKL if the cyhighs[mkl] extra is installed) before any
-# solve calls into it.
+# (Accelerate on macOS, MKL if the cyhighs[mkl] extra is installed, otherwise
+# the bundled OpenBLAS) before any solve calls into it.
 configure_blas_backend()
 
 from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType  # noqa: E402

@@ -8,7 +8,7 @@ The recommended way to install `cyhighs` is from a prebuilt wheel with pip.
 pip install cyhighs
 ```
 
-The wheels bundle HiGHS statically, as described in
+The wheels bundle HiGHS, as described in
 [How HiGHS is bundled](bundling.md), so this single command gives you a working
 solver with no further setup. The only runtime dependencies are NumPy and SciPy,
 which pip installs for you.
@@ -56,13 +56,13 @@ assert cyhighs.highs_version().startswith("1.15")
 ## From source
 
 If you want to build from source, for example to develop the package or to build
-for a platform without a published wheel, you need a C and C++ compiler. CMake
-and Ninja are pulled in automatically as build dependencies, so you do not have
-to install them yourself.
+for a platform without a published wheel, you need a C compiler. Meson and
+Ninja are pulled in automatically as build dependencies, so you do not have to
+install them yourself.
 
-The build always compiles HiGHS and HiPO from source at a pinned version, and
-needs network access to fetch the HiGHS source and prebuilt
-libblastrampoline/OpenBLAS binaries (see [How HiGHS is bundled](bundling.md)).
+The build never compiles HiGHS or HiPO. It links prebuilt HiGHS, libblastrampoline,
+and OpenBLAS binaries instead, and needs network access to fetch them (see
+[How HiGHS is bundled](bundling.md)).
 
 The project uses [uv](https://docs.astral.sh/uv/) for development. Cloning the
 repository and running a sync builds the extension.

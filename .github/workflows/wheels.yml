@@ -10,7 +10,8 @@ on:
   pull_request:
     paths:
       - "pyproject.toml"
-      - "CMakeLists.txt"
+      - "meson.build"
+      - "subprojects/**"
       - ".github/workflows/wheels.yml"
   release:
     types: [published]
@@ -20,14 +21,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Every wheel flavor builds the same way now (see CMakeLists.txt): HiGHS +
-  # HiPO compile from source, and OpenBLAS + libblastrampoline are fetched as
-  # prebuilt binaries. That means a single cibuildwheel job with an OS matrix
-  # covers every platform, with cibuildwheel picking the right container
-  # (manylinux_2_28/musllinux_1_2 on Linux) or native toolchain (macOS,
-  # Windows) per matrix entry.
+  # Every wheel flavor builds the same way now (see meson.build): HiGHS +
+  # HiPO, OpenBLAS, and libblastrampoline are all consumed as prebuilt JLL
+  # binaries rather than compiled from source. That means a single
+  # cibuildwheel job with an OS matrix covers every platform, with
+  # cibuildwheel picking the right container (manylinux_2_28/musllinux_1_2 on
+  # Linux) or native toolchain (macOS, Windows) per matrix entry.
   build_wheels:
-    name: Wheels on ${{ matrix.os }}${{ matrix.variant == 'static' && ' (static)' || '' }}
+    name: Wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,46 +38,8 @@ jobs:
           - ubuntu-24.04-arm   # Linux aarch64 -> manylinux_2_28 + musllinux_1_2
           - macos-latest       # macOS arm64
           - windows-latest     # Windows AMD64
-        # The "static" variant builds with CYHIGHS_USE_LBT=OFF (see
-        # CMakeLists.txt): OpenBLAS linked directly, with no libblastrampoline
-        # forwarding layer in between. It is excluded on macOS, where the flag
-        # has no effect at all (HiGHS always links Accelerate directly there),
-        # so it would just duplicate the default build.
-        variant: [default, static]
-        exclude:
-          - os: macos-latest
-            variant: static
     steps:
       - uses: actions/checkout@v4
-
-      # The static variant is not published to PyPI (see "Static (no lbt)
-      # wheels" in docs/guide/bundling.md): PyPI does not let two wheels with
-      # the same name, version, and platform tag coexist for users to choose
-      # between, pip would just pick one. Give it a PEP 440 local version
-      # segment instead, the same mechanism PyTorch uses for its CUDA/CPU
-      # variant wheels, so it is only ever installed when asked for by exact
-      # file or URL. Matching this in pyproject.toml itself, rather than
-      # renaming the wheel after the fact, keeps the wheel's filename and its
-      # internal metadata consistent.
-      - name: Tag the static variant's version
-        if: matrix.variant == 'static'
-        # Explicit bash, not the default pwsh on Windows runners: pwsh parses
-        # this whole block as PowerShell script rather than passing it
-        # through, and its escaping rules differ from bash's (a real CI
-        # failure: pwsh treated \" inside the python -c string as a literal
-        # backslash followed by a real string terminator, not an escaped
-        # quote, and failed to parse the script at all).
-        shell: bash
-        run: |
-          python3 -c "
-          import pathlib, re
-          path = pathlib.Path('pyproject.toml')
-          text = path.read_text()
-          new_text, count = re.subn(
-              r'(?m)^version = \"(\d[^\"]*)\"', r'version = \"\1+static\"', text, count=1)
-          assert count == 1, 'expected exactly one project.version line to update'
-          path.write_text(new_text)
-          "
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.0
@@ -103,19 +66,11 @@ jobs:
           # still built; drop this once scipy musllinux coverage is confirmed
           # for all targets. Unused outside the Linux matrix entries.
           CIBW_TEST_SKIP: "*-musllinux_*"
-          # conda-forge (CMakeLists.txt's default OpenBLAS source) only ships
-          # glibc binaries, so the musllinux_1_2 container needs its own,
-          # Alpine-native OpenBLAS instead, found via find_library. The
-          # _LINUX suffix means cibuildwheel only runs this for the Linux
-          # matrix entries; within those, it's a no-op in the manylinux_2_28
-          # container, which has no apk.
-          CIBW_BEFORE_ALL_LINUX: "command -v apk && apk add --no-cache openblas-dev || true"
-          CIBW_CONFIG_SETTINGS: ${{ matrix.variant == 'static' && 'cmake.define.CYHIGHS_USE_LBT=OFF' || '' }}
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.variant == 'static' && 'static-wheels' || 'wheels' }}-${{ matrix.os }}
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -158,25 +113,3 @@ jobs:
           merge-multiple: true
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  publish_static_wheels:
-    name: Attach static wheels to the release
-    needs: build_wheels
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download static wheel artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: static-wheels-*
-          path: static-wheels
-          merge-multiple: true
-      - name: Upload to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release upload "${{ github.event.release.tag_name }}"
-          static-wheels/*.whl
-          --repo "${{ github.repository }}"

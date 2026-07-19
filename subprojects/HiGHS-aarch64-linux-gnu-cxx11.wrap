@@ -1,0 +1,10 @@
+# This platform's tarball, straight from the JLL's own release assets.
+[wrap-file]
+directory = HiGHS-aarch64-linux-gnu-cxx11
+source_url = https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases/download/HiGHS-v1.15.1+0/HiGHS.v1.15.1.aarch64-linux-gnu-cxx11.tar.gz
+source_filename = HiGHS.v1.15.1.aarch64-linux-gnu-cxx11.tar.gz
+source_hash = bff7201667ae5ac3d658831f5b60b8bcf34b421e974769ab99e6b57b45b9992b
+# The JLL's tarballs are flat archives with no leading directory.
+lead_directory_missing = true
+# Drops in the meson.build this platform's tarball does not ship.
+patch_directory = HiGHS-aarch64-linux-gnu-cxx11

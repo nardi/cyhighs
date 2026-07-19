@@ -1,0 +1,10 @@
+# This platform's tarball, straight from the JLL's own release assets.
+[wrap-file]
+directory = CompilerSupportLibraries-x86_64-freebsd-libgfortran5.0.0
+source_url = https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/download/CompilerSupportLibraries-v1.5.5+2/CompilerSupportLibraries.v1.5.5.x86_64-unknown-freebsd-libgfortran5.tar.gz
+source_filename = CompilerSupportLibraries.v1.5.5.x86_64-unknown-freebsd-libgfortran5.tar.gz
+source_hash = fb1fb7761990b3c864e339ba49911910b705852435c76a59d98d137a3fda6cab
+# The JLL's tarballs are flat archives with no leading directory.
+lead_directory_missing = true
+# Drops in the meson.build this platform's tarball does not ship.
+patch_directory = CompilerSupportLibraries-x86_64-freebsd-libgfortran5.0.0

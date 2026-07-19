@@ -1,0 +1,10 @@
+# This platform's tarball, straight from the JLL's own release assets.
+[wrap-file]
+directory = HiGHS-aarch64-freebsd
+source_url = https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases/download/HiGHS-v1.15.1+0/HiGHS.v1.15.1.aarch64-unknown-freebsd.tar.gz
+source_filename = HiGHS.v1.15.1.aarch64-unknown-freebsd.tar.gz
+source_hash = a8a769eb51795c1894a6c049ade6761585b94b8e41558a476478fa014243d54e
+# The JLL's tarballs are flat archives with no leading directory.
+lead_directory_missing = true
+# Drops in the meson.build this platform's tarball does not ship.
+patch_directory = HiGHS-aarch64-freebsd

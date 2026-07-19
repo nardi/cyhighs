@@ -1,0 +1,10 @@
+# This platform's tarball, straight from the JLL's own release assets.
+[wrap-file]
+directory = OpenBLAS32-i686-windows-libgfortran5.0.0
+source_url = https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.33+2/OpenBLAS32.v0.3.33.i686-w64-mingw32-libgfortran5.tar.gz
+source_filename = OpenBLAS32.v0.3.33.i686-w64-mingw32-libgfortran5.tar.gz
+source_hash = a3048f549501d62e4d01902399203ee09e5531405bd034af1ae1da8650922379
+# The JLL's tarballs are flat archives with no leading directory.
+lead_directory_missing = true
+# Drops in the meson.build this platform's tarball does not ship.
+patch_directory = OpenBLAS32-i686-windows-libgfortran5.0.0
