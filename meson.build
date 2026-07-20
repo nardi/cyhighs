@@ -58,11 +58,19 @@ py = import('python').find_installation(pure: false)
 # libhighs itself is dynamically linked against zlib on every platform, and
 # unlike Linux's system libz, macOS and Windows have no guarantee a
 # compatible zlib is already present, so it must be bundled alongside the
-# other JLL-provided runtime libraries the same way.
+# other JLL-provided runtime libraries the same way. A plain dependency('Zlib')
+# is not enough to guarantee that: build environments here all have *some*
+# system zlib (an SDK-bundled stub on macOS, the system package on Linux),
+# and dependency() only consults the [provide] fallback and configures this
+# subproject at all once that system search comes up empty. Since it does not,
+# the subproject (and its install_data/install_symlink calls bundling libz)
+# would silently never run. subproject() forces it to run regardless.
+zlib_dep = subproject('Zlib').get_variable('zlib_dep')
+
 py.extension_module(
   '_core',
   'src/cyhighs/_core.pyx',
-  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32'), dependency('Zlib')],
+  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32'), zlib_dep],
   cython_args: ['--3str'],
   subdir: 'cyhighs',
   install: true,

@@ -52,6 +52,13 @@ Zlib_dep = dependency('Zlib')
 
 install_data('lib/libhighs.so', install_dir: get_option('libdir'))
 
+# The tarball's lib/libhighs.so is the unversioned dev-time name; the
+# library's own embedded DT_SONAME (and therefore the NEEDED entry our
+# compiled _core.so records) is the versioned libhighs.so.1, which nothing
+# above installs. Without this symlink present alongside it, the runtime
+# loader cannot resolve that reference.
+install_symlink('libhighs.so.1', pointing_to: 'libhighs.so', install_dir: get_option('libdir'))
+
 
 
 highs_dep = declare_dependency(

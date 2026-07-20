@@ -46,6 +46,15 @@ libblastrampoline = cc.find_library('blastrampoline', dirs: meson.current_source
 
 install_data('lib/libblastrampoline.so', install_dir: get_option('libdir'))
 
+# Same gap as HiGHS/OpenBLAS32: lib/libblastrampoline.so is the dev-time
+# name, but consumers need the versioned libblastrampoline.so.5 the
+# library's own DT_SONAME records.
+install_symlink(
+  'libblastrampoline.so.5',
+  pointing_to: 'libblastrampoline.so',
+  install_dir: get_option('libdir'),
+)
+
 
 
 libblastrampoline_dep = declare_dependency(
