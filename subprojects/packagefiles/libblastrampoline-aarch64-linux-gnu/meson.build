@@ -49,9 +49,10 @@ install_data('lib/libblastrampoline.so', install_dir: get_option('libdir'))
 # Same gap as HiGHS/OpenBLAS32: lib/libblastrampoline.so is the dev-time
 # name, but consumers need the versioned libblastrampoline.so.5 the
 # library's own DT_SONAME records.
-install_symlink(
+fs.copyfile(
+  'lib/libblastrampoline.so',
   'libblastrampoline.so.5',
-  pointing_to: 'libblastrampoline.so',
+  install: true,
   install_dir: get_option('libdir'),
 )
 

@@ -50,9 +50,13 @@ install_data('lib/libz.1.3.2.dylib', install_dir: get_option('libdir'))
 # (libhighs.dylib among them) record their zlib dependency by the shorter
 # @rpath/libz.1.dylib compatibility-version name, matching how every other
 # library in these JLL tarballs is named (e.g. libgomp.1.dylib, not a full
-# patch version). Without this symlink present alongside the real file,
-# delocate/dyld cannot resolve that reference.
-install_symlink('libz.1.dylib', pointing_to: 'libz.1.3.2.dylib', install_dir: get_option('libdir'))
+# patch version). Without a copy present under that name too, delocate/dyld
+# cannot resolve that reference. install_symlink() would be lighter than a
+# second copy, but its target is invisible to meson's own install-plan
+# introspection, which meson-python relies on to decide what goes in the
+# wheel, so it is silently dropped there; fs.copyfile() is a real,
+# independently-tracked install target instead.
+fs.copyfile('lib/libz.1.3.2.dylib', 'libz.1.dylib', install: true, install_dir: get_option('libdir'))
 
 
 

@@ -63,7 +63,7 @@ py = import('python').find_installation(pure: false)
 # system zlib (an SDK-bundled stub on macOS, the system package on Linux),
 # and dependency() only consults the [provide] fallback and configures this
 # subproject at all once that system search comes up empty. Since it does not,
-# the subproject (and its install_data/install_symlink calls bundling libz)
+# the subproject (and its install_data/fs.copyfile calls bundling libz)
 # would silently never run. subproject() forces it to run regardless.
 zlib_dep = subproject('Zlib').get_variable('zlib_dep')
 

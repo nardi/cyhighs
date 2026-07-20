@@ -53,7 +53,7 @@ install_data('lib/libopenblas.so', install_dir: get_option('libdir'))
 # Same gap as HiGHS above: lib/libopenblas.so is the dev-time name, but
 # consumers need the versioned libopenblas.so.0 the library's own DT_SONAME
 # records (matching the macOS build's libopenblas.0.3.33.dylib).
-install_symlink('libopenblas.so.0', pointing_to: 'libopenblas.so', install_dir: get_option('libdir'))
+fs.copyfile('lib/libopenblas.so', 'libopenblas.so.0', install: true, install_dir: get_option('libdir'))
 
 
 
