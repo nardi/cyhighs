@@ -55,6 +55,15 @@ jobs:
           # least 11.0 for the C++17 standard library features HiGHS relies
           # on. Unused outside the macOS matrix entry.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
+          # The JLL-provided binaries (libhighs, the bundled CompilerSupportLibraries
+          # libstdc++/libgfortran, ...) were built with a newer GCC than the
+          # default manylinux_2_28 (AlmaLinux 8) container's policy allows:
+          # auditwheel refuses to repair the wheel, citing "too-recent
+          # versioned symbols". manylinux_2_34 (AlmaLinux 9) has a high enough
+          # ceiling. Unused outside the Linux matrix entries (musllinux is
+          # unaffected, since musl has no comparable symbol versioning).
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           # Verify each freshly built wheel by running the test suite against
           # it. pytest-markdown-docs is required because the project addopts
           # enable it, and it lets the documentation examples run against the

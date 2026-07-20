@@ -57,7 +57,10 @@ jobs:
         # time (see mesonpy._rpath.fix_rpath, only called from build_wheel).
         run: uv sync --no-editable
       - name: Run tests
-        run: uv run pytest
+        # --no-sync: `uv run` re-syncs the environment by default, which
+        # would silently redo the build in (default) editable mode and
+        # undo the --no-editable sync above.
+        run: uv run --no-sync pytest
       # Run the performance benchmarks once per operating system, reusing the
       # extension already built above. One Python version is enough, since the
       # benchmarks measure the compiled solver rather than the Python layer.
@@ -65,7 +68,7 @@ jobs:
       # installed yet.
       - name: Run benchmarks (OpenBLAS)
         if: matrix.python-version == '3.12'
-        run: uv run pytest benchmarks --benchmark-json=benchmark.json
+        run: uv run --no-sync pytest benchmarks --benchmark-json=benchmark.json
       # Compare against the stored history and comment on regressions. Each
       # operating system tracks its own series on its own data branch, since
       # absolute timings differ per platform and a shared branch would race when
@@ -97,7 +100,7 @@ jobs:
         if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
         env:
           CYHIGHS_LBT_PREFER: mkl
-        run: uv run pytest benchmarks --benchmark-json=benchmark-mkl.json
+        run: uv run --no-sync pytest benchmarks --benchmark-json=benchmark-mkl.json
       - name: Track benchmark regressions (MKL)
         if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
         uses: benchmark-action/github-action-benchmark@v1

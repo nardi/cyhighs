@@ -54,10 +54,15 @@ project(
 
 py = import('python').find_installation(pure: false)
 
+# Not linked directly (nothing in _core.pyx calls zlib functions), but
+# libhighs itself is dynamically linked against zlib on every platform, and
+# unlike Linux's system libz, macOS and Windows have no guarantee a
+# compatible zlib is already present, so it must be bundled alongside the
+# other JLL-provided runtime libraries the same way.
 py.extension_module(
   '_core',
   'src/cyhighs/_core.pyx',
-  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32')],
+  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32'), dependency('Zlib')],
   cython_args: ['--3str'],
   subdir: 'cyhighs',
   install: true,

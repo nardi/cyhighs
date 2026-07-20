@@ -85,6 +85,17 @@ endif
 # declared as products of their own, and would otherwise be left out.
 
 
+# libgfortran itself depends on libquadmath (real128 support), which this
+# tarball ships alongside the six declared products above but does not
+# expose as one of its own: it is never found via cc.find_library() here or
+# linked into anything of ours directly, only bundled if present so
+# delocate can resolve libgfortran's own transitive @rpath/libquadmath.0.dylib
+# reference.
+if fs.is_file('lib/libquadmath.0.dylib')
+  install_data('lib/libquadmath.0.dylib', install_dir: get_option('libdir'))
+endif
+
+
 install_data('lib/libatomic.1.dylib', install_dir: get_option('libdir'))
 
 install_data('lib/libgcc_s.1.1.dylib', install_dir: get_option('libdir'))

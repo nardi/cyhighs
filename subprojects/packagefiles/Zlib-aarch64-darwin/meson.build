@@ -46,6 +46,14 @@ libz = cc.find_library('z', dirs: meson.current_source_dir() / 'lib')
 
 install_data('lib/libz.1.3.2.dylib', install_dir: get_option('libdir'))
 
+# The tarball only ships the full-version filename above, but consumers
+# (libhighs.dylib among them) record their zlib dependency by the shorter
+# @rpath/libz.1.dylib compatibility-version name, matching how every other
+# library in these JLL tarballs is named (e.g. libgomp.1.dylib, not a full
+# patch version). Without this symlink present alongside the real file,
+# delocate/dyld cannot resolve that reference.
+install_symlink('libz.1.dylib', pointing_to: 'libz.1.3.2.dylib', install_dir: get_option('libdir'))
+
 
 
 zlib_dep = declare_dependency(
