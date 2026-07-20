@@ -50,6 +50,10 @@ libblastrampoline_dep = dependency('libblastrampoline')
 
 install_data('lib/libopenblas.so', install_dir: get_option('libdir'))
 
+# Same gap as HiGHS: lib/libopenblas.so is the dev-time name, but consumers
+# need the versioned libopenblas.so.0 the library's own DT_SONAME records.
+fs.copyfile('lib/libopenblas.so', 'libopenblas.so.0', install: true, install_dir: get_option('libdir'))
+
 
 
 openblas32_dep = declare_dependency(

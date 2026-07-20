@@ -52,6 +52,17 @@ Zlib_dep = dependency('Zlib')
 
 install_data('lib/libhighs.so', install_dir: get_option('libdir'))
 
+# The tarball's lib/libhighs.so is the unversioned dev-time name; the
+# library's own embedded DT_SONAME (and therefore the NEEDED entry our
+# compiled _core.so records) is the versioned libhighs.so.1, which nothing
+# above installs. Without a copy present under that name too, the runtime
+# loader (and auditwheel) cannot resolve that reference. install_symlink()
+# would be lighter, but its target is invisible to meson's own install-plan
+# introspection, which meson-python relies on to decide what goes in the
+# wheel, so it is silently dropped there; fs.copyfile() is a real,
+# independently-tracked install target instead.
+fs.copyfile('lib/libhighs.so', 'libhighs.so.1', install: true, install_dir: get_option('libdir'))
+
 
 
 highs_dep = declare_dependency(
