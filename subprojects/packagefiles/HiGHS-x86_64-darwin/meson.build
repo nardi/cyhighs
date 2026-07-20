@@ -52,6 +52,15 @@ Zlib_dep = dependency('Zlib')
 
 install_data('lib/libhighs.1.15.dylib', install_dir: get_option('libdir'))
 
+# Same gap as Zlib: the tarball ships the full-version filename above, but
+# consumers (our own _core.so among them) record their dependency by the
+# shorter @rpath/libhighs.1.dylib compatibility-version name. install_symlink()
+# would be lighter, but its target is invisible to meson's own install-plan
+# introspection, which meson-python relies on to decide what goes in the
+# wheel, so it is silently dropped there; fs.copyfile() is a real,
+# independently-tracked install target instead.
+fs.copyfile('lib/libhighs.1.15.dylib', 'libhighs.1.dylib', install: true, install_dir: get_option('libdir'))
+
 
 
 highs_dep = declare_dependency(

@@ -50,6 +50,19 @@ libblastrampoline_dep = dependency('libblastrampoline')
 
 install_data('lib/libopenblas.0.3.33.dylib', install_dir: get_option('libdir'))
 
+# Same gap as Zlib/HiGHS: the tarball ships the full-version filename above,
+# but consumers record their dependency by the shorter compatibility-version
+# name. install_symlink() would be lighter, but its target is invisible to
+# meson's own install-plan introspection, which meson-python relies on to
+# decide what goes in the wheel, so it is silently dropped there;
+# fs.copyfile() is a real, independently-tracked install target instead.
+fs.copyfile(
+  'lib/libopenblas.0.3.33.dylib',
+  'libopenblas.0.dylib',
+  install: true,
+  install_dir: get_option('libdir'),
+)
+
 
 
 openblas32_dep = declare_dependency(

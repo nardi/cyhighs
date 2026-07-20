@@ -76,6 +76,26 @@ install_data('lib/libssp.so', install_dir: get_option('libdir'))
 
 install_data('lib/libstdc++.so', install_dir: get_option('libdir'))
 
+# Same gap seen on HiGHS/OpenBLAS32/libblastrampoline: each lib/lib*.so above
+# is the unversioned dev-time name, but consumers need the versioned name
+# matching the library's own DT_SONAME (the standard, long-stable soname
+# for each of these on any glibc Linux). install_symlink() would be lighter,
+# but its target is invisible to meson's own install-plan introspection,
+# which meson-python relies on to decide what goes in the wheel, so it is
+# silently dropped there; fs.copyfile() is a real, independently-tracked
+# install target instead.
+fs.copyfile('lib/libatomic.so', 'libatomic.so.1', install: true, install_dir: get_option('libdir'))
+
+fs.copyfile('lib/libgcc_s.so', 'libgcc_s.so.1', install: true, install_dir: get_option('libdir'))
+
+fs.copyfile('lib/libgfortran.so', 'libgfortran.so.5', install: true, install_dir: get_option('libdir'))
+
+fs.copyfile('lib/libgomp.so', 'libgomp.so.1', install: true, install_dir: get_option('libdir'))
+
+fs.copyfile('lib/libssp.so', 'libssp.so.0', install: true, install_dir: get_option('libdir'))
+
+fs.copyfile('lib/libstdc++.so', 'libstdc++.so.6', install: true, install_dir: get_option('libdir'))
+
 
 
 compilersupportlibraries_dep = declare_dependency(

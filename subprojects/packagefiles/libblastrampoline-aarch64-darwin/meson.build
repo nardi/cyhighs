@@ -46,6 +46,19 @@ libblastrampoline = cc.find_library('blastrampoline', dirs: meson.current_source
 
 install_data('lib/libblastrampoline.5.15.0.dylib', install_dir: get_option('libdir'))
 
+# Same gap as Zlib/HiGHS: the tarball ships the full-version filename above,
+# but consumers record their dependency by the shorter compatibility-version
+# name. install_symlink() would be lighter, but its target is invisible to
+# meson's own install-plan introspection, which meson-python relies on to
+# decide what goes in the wheel, so it is silently dropped there;
+# fs.copyfile() is a real, independently-tracked install target instead.
+fs.copyfile(
+  'lib/libblastrampoline.5.15.0.dylib',
+  'libblastrampoline.5.dylib',
+  install: true,
+  install_dir: get_option('libdir'),
+)
+
 
 
 libblastrampoline_dep = declare_dependency(
