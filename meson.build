@@ -82,6 +82,15 @@ py.extension_module(
   install: true,
 )
 
+# _core links against several JLL libraries that each live in their own
+# distinct subproject directory, so meson gives it one distinct build-tree,
+# @loader_path-relative RPATH entry per directory. meson-python's own
+# install-time RPATH fix-up (mesonpy._rpath.fix_rpath) rewrites every one of
+# those to the identical final destination, producing duplicate LC_RPATH
+# commands that (only on macOS) modern dyld refuses to load at all. No-op on
+# other platforms; see the script for the full explanation.
+meson.add_install_script(py, files('scripts/fix_duplicate_macos_rpaths.py'))
+
 py.install_sources(
   [
     'src/cyhighs/__init__.py',

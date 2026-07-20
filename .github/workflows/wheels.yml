@@ -69,7 +69,7 @@ jobs:
           # SONAME against isn't a real ELF -- likely a linker-script stand-in
           # for one of manylinux_2_34's system libraries, but the default,
           # non-verbose output does not name which one). Drop once diagnosed.
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -v -w {dest_dir} {wheel}"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel -v repair -w {dest_dir} {wheel}"
           # Verify each freshly built wheel by running the test suite against
           # it. pytest-markdown-docs is required because the project addopts
           # enable it, and it lets the documentation examples run against the
