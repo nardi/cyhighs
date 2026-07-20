@@ -81,12 +81,27 @@ def _plan_libdirs(build_dir: Path) -> list[Path]:
 def _library_search_dirs() -> tuple[Path, ...]:
     """Return every directory that might hold a JLL-provided runtime library.
 
-    In a built wheel, meson-python bundles them into a `.cyhighs.mesonpy.libs`
-    directory next to the `cyhighs` package. In an editable install they stay
-    in the subproject directories the install plan points at.
+    Three layouts are covered:
+
+    - a plain built wheel, where meson-python bundles the libraries into a
+      `.cyhighs.mesonpy.libs` directory next to the `cyhighs` package;
+    - a repaired wheel, where auditwheel (Linux) or delvewheel (Windows) has
+      additionally copied the libraries the extension links into a
+      `cyhighs.libs` directory, name-mangled, and rewritten the extension to
+      load those copies instead. That mangled copy is the libblastrampoline
+      instance actually resident at runtime, so this directory must be
+      searched or `_open_loaded_lbt` cannot bind the live instance and HiPO is
+      left with no BLAS backend (a real Windows CI segfault);
+    - an editable install, where the libraries stay in the subproject
+      directories the install plan points at.
     """
     core_dir = _core_dir()
-    return (core_dir, core_dir.parent / ".cyhighs.mesonpy.libs", *_plan_libdirs(core_dir))
+    return (
+        core_dir,
+        core_dir.parent / ".cyhighs.mesonpy.libs",
+        core_dir.parent / "cyhighs.libs",
+        *_plan_libdirs(core_dir),
+    )
 
 
 def _first_match(pattern_name: str) -> str | None:
