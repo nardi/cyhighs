@@ -54,23 +54,29 @@ project(
 
 py = import('python').find_installation(pure: false)
 
-# Not linked directly (nothing in _core.pyx calls zlib functions), but
 # libhighs itself is dynamically linked against zlib on every platform, and
 # unlike Linux's system libz, macOS and Windows have no guarantee a
 # compatible zlib is already present, so it must be bundled alongside the
-# other JLL-provided runtime libraries the same way. A plain dependency('Zlib')
-# is not enough to guarantee that: build environments here all have *some*
-# system zlib (an SDK-bundled stub on macOS, the system package on Linux),
-# and dependency() only consults the [provide] fallback and configures this
-# subproject at all once that system search comes up empty. Since it does not,
-# the subproject (and its install_data/fs.copyfile calls bundling libz)
-# would silently never run. subproject() forces it to run regardless.
-zlib_dep = subproject('Zlib').get_variable('zlib_dep')
+# other JLL-provided runtime libraries the same way. HiGHS's own packagefile
+# already declares this as one of its transitive dependencies and links it
+# into _core for us, but a plain dependency('Zlib') there is not enough to
+# guarantee it actually gets bundled: build environments here all have
+# *some* system zlib (an SDK-bundled stub on macOS, the system package on
+# Linux), and dependency() only consults the [provide] fallback and
+# configures this subproject at all once that system search comes up
+# empty, which it does not. Since HiGHS's own dependency('Zlib') result gets
+# cached under that exact name, forcing our own resolution of it first with
+# subproject() (regardless of system availability) is enough to make that
+# cached result -- and so HiGHS's own linking against it -- point at the
+# subproject too; _core does not need to (and, to avoid linking the same
+# subproject in via two separate paths, must not also) depend on it a
+# second time directly.
+subproject('Zlib')
 
 py.extension_module(
   '_core',
   'src/cyhighs/_core.pyx',
-  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32'), zlib_dep],
+  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32')],
   cython_args: ['--3str'],
   subdir: 'cyhighs',
   install: true,

@@ -64,6 +64,12 @@ jobs:
           # unaffected, since musl has no comparable symbol versioning).
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
+          # -v: diagnose an "ELFError: Magic number does not match" crash in
+          # auditwheel's own dependency-tree walk (a file it's resolving a
+          # SONAME against isn't a real ELF -- likely a linker-script stand-in
+          # for one of manylinux_2_34's system libraries, but the default,
+          # non-verbose output does not name which one). Drop once diagnosed.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -v -w {dest_dir} {wheel}"
           # Verify each freshly built wheel by running the test suite against
           # it. pytest-markdown-docs is required because the project addopts
           # enable it, and it lets the documentation examples run against the
