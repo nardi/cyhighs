@@ -64,12 +64,16 @@ jobs:
           # unaffected, since musl has no comparable symbol versioning).
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          # -v: diagnose an "ELFError: Magic number does not match" crash in
-          # auditwheel's own dependency-tree walk (a file it's resolving a
-          # SONAME against isn't a real ELF -- likely a linker-script stand-in
-          # for one of manylinux_2_34's system libraries, but the default,
-          # non-verbose output does not name which one). Drop once diagnosed.
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel -v repair -w {dest_dir} {wheel}"
+          # Diagnostic (temporary): auditwheel crashes in its own dependency
+          # walk with "ELFError: Magic number does not match" -- it opens a
+          # file resolved from a SONAME that isn't a real ELF -- but even -v
+          # does not name it. List every ".so" member of the built wheel with
+          # its first four bytes first (a real ELF starts with 7f 45 4c 46);
+          # anything else pinpoints a bundled member that is a text linker
+          # script rather than a binary. Drop both once diagnosed.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >-
+            python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); [print("DIAG", n, z.read(n)[:4]) for n in z.namelist() if ".so" in n]' {wheel};
+            auditwheel -v repair -w {dest_dir} {wheel}
           # _core links against several JLL libraries that each live in their
           # own distinct subproject directory, so meson gives it one distinct
           # build-tree, @loader_path-relative RPATH entry per directory.
@@ -78,11 +82,14 @@ jobs:
           # LC_RPATH commands that modern dyld refuses to load at all. This
           # has to run after delocate (which does its own vendoring/rpath
           # work) and operates on the wheel delocate has already written to
-          # dest_dir, not {wheel} (the pre-repair one). See the script for the
-          # full explanation.
+          # dest_dir, not {wheel} (the pre-repair one). cibuildwheel's repair
+          # command has no {project} placeholder, but the macOS build runs
+          # natively (no container) and inherits the runner environment, so
+          # the checkout root is reachable through $GITHUB_WORKSPACE. See the
+          # script for the full explanation.
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >-
             delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} &&
-            python3 {project}/scripts/fix_duplicate_macos_rpaths.py {dest_dir}/*.whl
+            python3 "$GITHUB_WORKSPACE/scripts/fix_duplicate_macos_rpaths.py" {dest_dir}/*.whl
           # Verify each freshly built wheel by running the test suite against
           # it. pytest-markdown-docs is required because the project addopts
           # enable it, and it lets the documentation examples run against the
