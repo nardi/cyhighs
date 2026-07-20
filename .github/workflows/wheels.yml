@@ -70,6 +70,19 @@ jobs:
           # for one of manylinux_2_34's system libraries, but the default,
           # non-verbose output does not name which one). Drop once diagnosed.
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel -v repair -w {dest_dir} {wheel}"
+          # _core links against several JLL libraries that each live in their
+          # own distinct subproject directory, so meson gives it one distinct
+          # build-tree, @loader_path-relative RPATH entry per directory.
+          # meson-python's own install-time RPATH fix-up rewrites every one of
+          # those to the identical final destination, producing duplicate
+          # LC_RPATH commands that modern dyld refuses to load at all. This
+          # has to run after delocate (which does its own vendoring/rpath
+          # work) and operates on the wheel delocate has already written to
+          # dest_dir, not {wheel} (the pre-repair one). See the script for the
+          # full explanation.
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >-
+            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} &&
+            python3 {project}/scripts/fix_duplicate_macos_rpaths.py {dest_dir}/*.whl
           # Verify each freshly built wheel by running the test suite against
           # it. pytest-markdown-docs is required because the project addopts
           # enable it, and it lets the documentation examples run against the

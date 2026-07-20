@@ -56,6 +56,18 @@ jobs:
         # step entirely, leaving the extension unable to find them at import
         # time (see mesonpy._rpath.fix_rpath, only called from build_wheel).
         run: uv sync --no-editable
+      - name: Fix duplicate macOS RPATH entries
+        # _core links against several JLL libraries that each live in their
+        # own distinct subproject directory, so meson gives it one distinct
+        # build-tree, @loader_path-relative RPATH entry per directory.
+        # meson-python's own install-time RPATH fix-up (which the sync step
+        # above just ran, via the real, non-editable install) rewrites every
+        # one of those to the identical final destination, producing
+        # duplicate LC_RPATH commands that modern dyld refuses to load at
+        # all. No-op on other platforms; see the script for the full
+        # explanation.
+        if: matrix.os == 'macos-latest'
+        run: python3 scripts/fix_duplicate_macos_rpaths.py .venv/lib/python*/site-packages/cyhighs/_core*.so
       - name: Run tests
         # --no-sync: `uv run` re-syncs the environment by default, which
         # would silently redo the build in (default) editable mode and
