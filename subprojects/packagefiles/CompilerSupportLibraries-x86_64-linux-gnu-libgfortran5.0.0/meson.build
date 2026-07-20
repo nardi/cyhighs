@@ -66,7 +66,13 @@ libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib')
 
 install_data('lib/libatomic.so', install_dir: get_option('libdir'))
 
-install_data('lib/libgcc_s.so', install_dir: get_option('libdir'))
+# libgcc_s is the one exception in this tarball: lib/libgcc_s.so is not an ELF
+# but a GNU ld linker script (`GROUP(libgcc_s.so.1 -lgcc)`, the standard GCC
+# layout), so install_data would bundle that text file where a shared library
+# belongs -- and both the runtime loader and auditwheel then choke trying to
+# read it as ELF. The real shared object is lib/libgcc_s.so.1; bundle that
+# under both names instead (see the versioned-copy block below for the .so.1).
+fs.copyfile('lib/libgcc_s.so.1', 'libgcc_s.so', install: true, install_dir: get_option('libdir'))
 
 install_data('lib/libgfortran.so', install_dir: get_option('libdir'))
 
@@ -86,7 +92,8 @@ install_data('lib/libstdc++.so', install_dir: get_option('libdir'))
 # install target instead.
 fs.copyfile('lib/libatomic.so', 'libatomic.so.1', install: true, install_dir: get_option('libdir'))
 
-fs.copyfile('lib/libgcc_s.so', 'libgcc_s.so.1', install: true, install_dir: get_option('libdir'))
+# Sourced from the real ELF, not lib/libgcc_s.so (a linker script; see above).
+fs.copyfile('lib/libgcc_s.so.1', 'libgcc_s.so.1', install: true, install_dir: get_option('libdir'))
 
 fs.copyfile('lib/libgfortran.so', 'libgfortran.so.5', install: true, install_dir: get_option('libdir'))
 

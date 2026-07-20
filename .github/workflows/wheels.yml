@@ -64,16 +64,6 @@ jobs:
           # unaffected, since musl has no comparable symbol versioning).
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          # Diagnostic (temporary): auditwheel crashes in its own dependency
-          # walk with "ELFError: Magic number does not match" -- it opens a
-          # file resolved from a SONAME that isn't a real ELF -- but even -v
-          # does not name it. List every ".so" member of the built wheel with
-          # its first four bytes first (a real ELF starts with 7f 45 4c 46);
-          # anything else pinpoints a bundled member that is a text linker
-          # script rather than a binary. Drop both once diagnosed.
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >-
-            python3 -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); [print("DIAG", n, z.read(n)[:4]) for n in z.namelist() if ".so" in n]' {wheel};
-            auditwheel -v repair -w {dest_dir} {wheel}
           # _core links against several JLL libraries that each live in their
           # own distinct subproject directory, so meson gives it one distinct
           # build-tree, @loader_path-relative RPATH entry per directory.
