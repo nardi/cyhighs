@@ -47,7 +47,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Sync environment and build the extension
-        run: uv sync
+        # --no-editable forces a real (non-editable) install rather than
+        # meson-python's default editable build. The JLL-provided shared
+        # libraries (HiGHS, OpenBLAS, libblastrampoline, ...) are bundled via
+        # meson-python's "internal shared libs" mechanism, which only
+        # relocates and rewrites the extension's rpath to point at the
+        # bundled copies during a real install; editable installs skip that
+        # step entirely, leaving the extension unable to find them at import
+        # time (see mesonpy._rpath.fix_rpath, only called from build_wheel).
+        run: uv sync --no-editable
       - name: Run tests
         run: uv run pytest
       # Run the performance benchmarks once per operating system, reusing the
@@ -84,7 +92,7 @@ jobs:
       # chosen at import time rather than at compile time.
       - name: Install the mkl extra
         if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
-        run: uv sync --extra mkl
+        run: uv sync --no-editable --extra mkl
       - name: Run benchmarks (MKL)
         if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
         env:

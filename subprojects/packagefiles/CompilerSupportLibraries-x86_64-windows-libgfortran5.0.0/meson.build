@@ -106,7 +106,15 @@ if is_msvc and python3.found() and fs.is_file('bin/libssp-0.dll') and not fs.is_
   )
   libssp = declare_dependency(link_with: libssp_import_lib)
 else
-  libssp = cc.find_library('ssp-0', dirs: meson.current_source_dir() / 'lib')
+  # Unlike the other libraries here, this tarball ships no lib/ssp-0.lib and
+  # no lib/libssp-0.dll.a import library for MinGW either, only the DLL
+  # itself under bin/. GNU ld can link directly against a DLL by path (no
+  # import library needed), so fall back to that when the plain search
+  # (which only looks in lib/) fails to find one.
+  libssp = cc.find_library('ssp-0', dirs: meson.current_source_dir() / 'lib', required: false)
+  if not libssp.found()
+    libssp = declare_dependency(link_args: [meson.current_source_dir() / 'bin' / 'libssp-0.dll'])
+  endif
 endif
 
 
