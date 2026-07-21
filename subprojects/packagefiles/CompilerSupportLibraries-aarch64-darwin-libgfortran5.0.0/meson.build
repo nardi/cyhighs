@@ -15,27 +15,49 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-libatomic = cc.find_library('atomic', dirs: meson.current_source_dir() / 'lib')
+# Not every library in this tarball ships the unversioned dev symlink (e.g.
+# libatomic does, libgcc_s does not), so each falls back to linking the
+# exact versioned file installed below when the plain lookup fails.
+
+libatomic = cc.find_library('atomic', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libatomic.found()
+  libatomic = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libatomic.1.dylib'])
+endif
 
 
 
-libgcc_s = cc.find_library('gcc_s', dirs: meson.current_source_dir() / 'lib')
+libgcc_s = cc.find_library('gcc_s', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgcc_s.found()
+  libgcc_s = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgcc_s.1.1.dylib'])
+endif
 
 
 
-libgfortran = cc.find_library('gfortran', dirs: meson.current_source_dir() / 'lib')
+libgfortran = cc.find_library('gfortran', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgfortran.found()
+  libgfortran = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgfortran.5.dylib'])
+endif
 
 
 
-libgomp = cc.find_library('gomp', dirs: meson.current_source_dir() / 'lib')
+libgomp = cc.find_library('gomp', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgomp.found()
+  libgomp = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgomp.1.dylib'])
+endif
 
 
 
-libssp = cc.find_library('ssp', dirs: meson.current_source_dir() / 'lib')
+libssp = cc.find_library('ssp', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libssp.found()
+  libssp = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libssp.0.dylib'])
+endif
 
 
 
-libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib')
+libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libstdcxx.found()
+  libstdcxx = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libstdc++.6.dylib'])
+endif
 
 
 
