@@ -3,80 +3,43 @@
 # HiGHS + HiPO are consumed as a prebuilt binary via the HiGHS_jll Julia
 # package, resolved through meson-jll's generated subprojects/*.wrap files
 # (see subprojects/ and meson-jll.lock, committed alongside this file). No
-# HiGHS source is compiled: dependency('HiGHS') resolves, at meson setup
+# HiGHS source is compiled: dependency('HiGHS_jll') resolves, at meson setup
 # time, to whichever platform tarball matches the host, and returns the
 # include directory plus a find_library('highs') result for that platform.
 #
 # HiPO's BLAS dependency is satisfied the same way libblastrampoline (lbt)
-# was before: dependency('HiGHS') pulls libblastrampoline in transitively on
-# every platform the JLL publishes, including macOS (unlike the from-source
-# build, where HiGHS's own cmake unconditionally linked Apple's Accelerate
-# framework directly and lbt never entered the picture there at all). Once
-# the compiled extension (and therefore lbt) is loaded, cyhighs's own
-# src/cyhighs/_blas_backend.py calls lbt's `lbt_forward` C API to register a
-# backend, in this order of preference:
+# was before: dependency('HiGHS') pulls libblastrampoline in transitively
+# on every platform the JLL publishes, including macOS. Once the compiled
+# extension (and therefore lbt) is loaded, cyhighs's own
+# src/cyhighs/_blas_backend.py calls lbt's `lbt_forward` C API to register
+# a backend, in this order of preference:
 #
 #   * Apple's Accelerate framework, on macOS, since it ships with the OS and
-#     is faster there than a bundled OpenBLAS;
+#     is faster there than a bundled OpenBLAS,
 #   * Intel MKL, if the optional `cyhighs[mkl]` extra is installed and its
-#     shared library can be located (Linux x86_64 / Windows x86_64 only --
-#     Intel has never published MKL for macOS or for ARM);
+#     shared library can be located (Linux x86_64 / Windows x86_64 only,
+#     Intel has never published MKL for macOS or for ARM),
 #   * otherwise the OpenBLAS32_jll bundled below, so cyhighs keeps working
 #     with zero configuration and no external dependencies by default.
 #
-# OpenBLAS32_jll is bundled on every platform (Accelerate is only a runtime
-# preference on macOS, not a build dependency) so there is always a working
+# OpenBLAS32_jll is bundled on every platform so there is always a working
 # fallback. It is used in preference to the plain OpenBLAS_jll deliberately:
 # it is the same LP64 dependency HiGHS.jl itself uses, and it is what
-# HiGHS_jll's own build was tested against. The plain OpenBLAS_jll ships only
-# an ILP64 (64-bit integer) build on Windows, which lbt forwards under a "64_"
-# symbol suffix; that satisfies HiGHS's classic Fortran-style BLAS calls, but
-# some HiPO code paths call CBLAS-prefixed entry points (cblas_dcopy,
-# cblas_dger, ...) that a real bug showed do not survive that suffix mangling
-# (lbt reports "no BLAS/LAPACK library loaded" for them and HiPO degrades into
-# a very slow, effectively hung solve). OpenBLAS32_jll ships a plain LP64
-# libopenblas with no suffix mangling, matching what HiGHS_jll expects.
-#
-# HiGHS's own myblas.cpp calls openblas_set_num_threads(), a real-OpenBLAS
-# extension function outside the standard BLAS/LAPACK ABI lbt forwards. The
-# prebuilt HiGHS_jll library already resolves that symbol against lbt
-# itself (it links lbt the same way this project's from-source build used
-# to shim lbt in under the "openblas" name), so no local stub is needed
-# here the way the old CMake build required one.
+# HiGHS_jll's own build was tested against.
 
 project(
   'cyhighs',
   'c',
   'cython',
-  version: '0.2.2',
-  default_options: ['buildtype=release'],
+  version: '0.2.2'
 )
 
 py = import('python').find_installation(pure: false)
 
-# libhighs itself is dynamically linked against zlib on every platform, and
-# unlike Linux's system libz, macOS and Windows have no guarantee a
-# compatible zlib is already present, so it must be bundled alongside the
-# other JLL-provided runtime libraries the same way. HiGHS's own packagefile
-# already declares this as one of its transitive dependencies and links it
-# into _core for us, but a plain dependency('Zlib') there is not enough to
-# guarantee it actually gets bundled: build environments here all have
-# *some* system zlib (an SDK-bundled stub on macOS, the system package on
-# Linux), and dependency() only consults the [provide] fallback and
-# configures this subproject at all once that system search comes up
-# empty, which it does not. Since HiGHS's own dependency('Zlib') result gets
-# cached under that exact name, forcing our own resolution of it first with
-# subproject() (regardless of system availability) is enough to make that
-# cached result -- and so HiGHS's own linking against it -- point at the
-# subproject too; _core does not need to (and, to avoid linking the same
-# subproject in via two separate paths, must not also) depend on it a
-# second time directly.
-subproject('Zlib')
-
 py.extension_module(
   '_core',
   'src/cyhighs/_core.pyx',
-  dependencies: [dependency('HiGHS'), dependency('OpenBLAS32')],
+  dependencies: [dependency('HiGHS_jll'), dependency('OpenBLAS32_jll')],
   cython_args: ['--3str'],
   subdir: 'cyhighs',
   install: true,
