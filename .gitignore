@@ -3,7 +3,18 @@
 /dist/
 /wheelhouse/
 *.egg-info/
-_skbuild/
+# meson-python's own non-editable builds (sdist, regular wheel) use a
+# temporary directory matching this pattern directly under the repo root.
+.mesonpy-*/
+
+# meson-jll downloads and extracts each JLL tarball under subprojects/ at
+# setup time. The *.wrap files and subprojects/packagefiles/ are the
+# committed, generated inputs (see meson-jll.lock); everything else there is
+# fetched output and should not be tracked.
+subprojects/packagecache/
+subprojects/.wraplock
+subprojects/*/
+!subprojects/packagefiles/
 
 # Zensical documentation build output
 /site/

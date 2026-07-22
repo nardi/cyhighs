@@ -8,26 +8,38 @@ The recommended way to install `cyhighs` is from a prebuilt wheel with pip.
 pip install cyhighs
 ```
 
-The wheels bundle HiGHS statically, as described in
+The wheels bundle HiGHS, as described in
 [How HiGHS is bundled](bundling.md), so this single command gives you a working
 solver with no further setup. The only runtime dependencies are NumPy and SciPy,
 which pip installs for you.
 
 Wheels are published for CPython 3.11 through 3.14 on:
 
-- **Linux** x86_64 and aarch64. Two flavours are shipped and pip picks the best
-  match automatically:
-    - `manylinux_2_28` (glibc 2.28 or newer, for example CentOS/RHEL 8, Debian
-      10+, Ubuntu 18.10+) and `musllinux_1_2` (Alpine and other musl distros),
-      built by compiling HiGHS from source in the manylinux/musllinux containers.
-    - `manylinux_2_39` (glibc 2.39 or newer, for example Ubuntu 24.04+), built
-      from the official prebuilt HiGHS archive. On new-enough systems pip prefers
-      this one.
+- **Linux** x86_64 and aarch64, as `manylinux_2_28` (glibc 2.28 or newer, for
+  example CentOS/RHEL 8, Debian 10+, Ubuntu 18.10+) and `musllinux_1_2` (Alpine
+  and other musl distros).
 - **macOS** on Apple Silicon (arm64).
 - **Windows** on x86_64.
 
 If a matching wheel exists for your platform, pip uses it and no compiler is
 needed.
+
+### Using Intel MKL instead of the bundled OpenBLAS
+
+By default, on Linux and Windows, the wheel's HiPO interior-point solver runs
+on a bundled OpenBLAS, so there is nothing further to install. On macOS, HiPO
+always uses Apple's Accelerate framework instead, and the rest of this section
+does not apply there.
+
+If you have Intel MKL available on Linux or Windows and want HiGHS to use it
+instead of the bundled OpenBLAS, install the optional extra:
+
+```bash
+pip install cyhighs[mkl]
+```
+
+This takes effect automatically the next time `cyhighs` is imported, with no
+rebuild. See [How HiGHS is bundled](bundling.md) for how the switch works.
 
 ## Verifying the install
 
@@ -44,25 +56,13 @@ assert cyhighs.highs_version().startswith("1.15")
 ## From source
 
 If you want to build from source, for example to develop the package or to build
-for a platform without a published wheel, you need a C and C++ compiler. CMake
-and Ninja are pulled in automatically as build dependencies, so you do not have
-to install them yourself.
+for a platform without a published wheel, you need a C compiler. Meson and
+Ninja are pulled in automatically as build dependencies, so you do not have to
+install them yourself.
 
-By default, rather than compiling HiGHS, the build downloads the official
-prebuilt HiGHS release archive for your platform and links it in, so it is quick
-and needs network access at build time. Because the prebuilt Linux archive
-targets a recent glibc, this default source build on Linux also requires
-**glibc 2.38 or newer**.
-
-To instead compile HiGHS itself from source — needed on older glibc or on musl,
-and how the `manylinux_2_28` / `musllinux` wheels are produced — pass
-`-DCYHIGHS_HIGHS_FROM_SOURCE=ON`. That path links a prebuilt OpenBLAS that must
-already be installed (for example `openblas-devel` on RHEL/Fedora,
-`libopenblas-dev` on Debian/Ubuntu, or `openblas-dev` on Alpine):
-
-```bash
-pip wheel . -C cmake.define.CYHIGHS_HIGHS_FROM_SOURCE=ON
-```
+The build never compiles HiGHS or HiPO. It links prebuilt HiGHS, libblastrampoline,
+and OpenBLAS binaries instead, and needs network access to fetch them (see
+[How HiGHS is bundled](bundling.md)).
 
 The project uses [uv](https://docs.astral.sh/uv/) for development. Cloning the
 repository and running a sync builds the extension.
@@ -71,14 +71,4 @@ repository and running a sync builds the extension.
 git clone https://github.com/nardi/cyhighs
 cd cyhighs
 uv sync
-```
-
-### Building offline or from a local archive
-
-If you already have the HiGHS `static-apache` archive for your platform (or want
-to avoid the download), point the build at it with the `HIGHS_ARCHIVE` CMake
-variable and no download happens:
-
-```bash
-pip wheel . -C cmake.define.HIGHS_ARCHIVE=/path/to/highs-1.15.1-x86_64-linux-gnu-static-apache.tar.gz
 ```

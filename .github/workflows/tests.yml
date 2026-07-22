@@ -47,21 +47,46 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Sync environment and build the extension
-        run: uv sync
+        # --no-editable forces a real (non-editable) install rather than
+        # meson-python's default editable build. The JLL-provided shared
+        # libraries (HiGHS, OpenBLAS, libblastrampoline, ...) are bundled via
+        # meson-python's "internal shared libs" mechanism, which only
+        # relocates and rewrites the extension's rpath to point at the
+        # bundled copies during a real install; editable installs skip that
+        # step entirely, leaving the extension unable to find them at import
+        # time (see mesonpy._rpath.fix_rpath, only called from build_wheel).
+        run: uv sync --no-editable
+      - name: Fix duplicate macOS RPATH entries
+        # _core links against several JLL libraries that each live in their
+        # own distinct subproject directory, so meson gives it one distinct
+        # build-tree, @loader_path-relative RPATH entry per directory.
+        # meson-python's own install-time RPATH fix-up (which the sync step
+        # above just ran, via the real, non-editable install) rewrites every
+        # one of those to the identical final destination, producing
+        # duplicate LC_RPATH commands that modern dyld refuses to load at
+        # all. No-op on other platforms; see the script for the full
+        # explanation.
+        if: matrix.os == 'macos-latest'
+        run: python3 scripts/fix_duplicate_macos_rpaths.py .venv/lib/python*/site-packages/cyhighs/_core*.so
       - name: Run tests
-        run: uv run pytest
+        # --no-sync: `uv run` re-syncs the environment by default, which
+        # would silently redo the build in (default) editable mode and
+        # undo the --no-editable sync above.
+        run: uv run --no-sync pytest
       # Run the performance benchmarks once per operating system, reusing the
       # extension already built above. One Python version is enough, since the
       # benchmarks measure the compiled solver rather than the Python layer.
-      - name: Run benchmarks
+      # This first run uses the bundled OpenBLAS, since the mkl extra is not
+      # installed yet.
+      - name: Run benchmarks (OpenBLAS)
         if: matrix.python-version == '3.12'
-        run: uv run pytest benchmarks --benchmark-json=benchmark.json
+        run: uv run --no-sync pytest benchmarks --benchmark-json=benchmark.json
       # Compare against the stored history and comment on regressions. Each
       # operating system tracks its own series on its own data branch, since
       # absolute timings differ per platform and a shared branch would race when
       # the three jobs push on main. The alert is advisory and never fails the
       # build, because hosted runners are too noisy for a hard threshold.
-      - name: Track benchmark regressions
+      - name: Track benchmark regressions (OpenBLAS)
         if: matrix.python-version == '3.12'
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -70,6 +95,33 @@ jobs:
           output-file-path: benchmark.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: benchmarks-${{ matrix.os }}
+          benchmark-data-dir-path: dev/bench
+          alert-threshold: "120%"
+          comment-on-alert: true
+          fail-on-alert: false
+          auto-push: ${{ github.event_name == 'push' }}
+          save-data-file: ${{ github.event_name == 'push' }}
+      # Also benchmark against MKL, on the platforms it is published for (the
+      # cyhighs[mkl] extra has no effect on macOS, see the bundling guide).
+      # Reinstalling does not rebuild the extension, since the backend is
+      # chosen at import time rather than at compile time.
+      - name: Install the mkl extra
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        run: uv sync --no-editable --extra mkl
+      - name: Run benchmarks (MKL)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        env:
+          CYHIGHS_LBT_PREFER: mkl
+        run: uv run --no-sync pytest benchmarks --benchmark-json=benchmark-mkl.json
+      - name: Track benchmark regressions (MKL)
+        if: matrix.python-version == '3.12' && matrix.os != 'macos-latest'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: benchmarks-${{ matrix.os }}-mkl
+          tool: pytest
+          output-file-path: benchmark-mkl.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks-${{ matrix.os }}-mkl
           benchmark-data-dir-path: dev/bench
           alert-threshold: "120%"
           comment-on-alert: true

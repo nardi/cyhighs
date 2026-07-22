@@ -6,9 +6,9 @@ icon: lucide/house
 
 `cyhighs` is a Python package that provides Cython bindings to
 [HiGHS](https://highs.dev/), the high performance solver for linear programming
-and mixed integer programming. It compiles HiGHS from source and links it
-statically, so an installed wheel carries the solver with it and needs no
-external system libraries.
+and mixed integer programming. It bundles a prebuilt HiGHS binary, so an
+installed wheel carries the solver with it and needs no external system
+libraries.
 
 The package exposes three interfaces at increasing levels of convenience. You
 can hand the solver raw arrays, you can pass SciPy sparse matrices, or you can

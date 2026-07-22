@@ -1,8 +1,8 @@
 # cyhighs
 
 Cython bindings to the [HiGHS](https://highs.dev) linear and mixed integer
-optimization solver. The solver is compiled from source and statically linked, so
-an installed wheel has no external system dependencies beyond NumPy and SciPy.
+optimization solver. The solver is bundled as a prebuilt binary, so an
+installed wheel has no external system dependencies beyond NumPy and SciPy.
 
 `cyhighs` provides three interfaces at increasing levels of convenience. You can
 hand the solver raw arrays, pass SciPy sparse matrices, or call a drop in

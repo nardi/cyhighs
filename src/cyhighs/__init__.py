@@ -22,13 +22,27 @@ reductions addressed by
 
 from __future__ import annotations
 
-from ._core import highs_infinity, highs_version
-from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType
-from .linprog_interface import linprog
-from .options import HighsOption
-from .result import LinearProblemSolution, OptimizeResult
-from .sparse_interface import solve_linear_problem_sparse
-from .validation import HIGHS_INFINITY, solve_linear_problem
+from ._blas_backend import add_windows_dll_directories, configure_blas_backend
+
+# Windows has no RPATH equivalent, so `_core`'s JLL-provided runtime DLLs
+# (HiGHS, libblastrampoline, the bundled OpenBLAS, ...) are not found
+# automatically the way they are on Linux/macOS. Must run before `_core` is
+# imported at all.
+add_windows_dll_directories()
+
+from ._core import highs_infinity, highs_version  # noqa: E402
+
+# Importing _core loads libblastrampoline; point it at cyhighs's BLAS backend
+# (Accelerate on macOS, MKL if the cyhighs[mkl] extra is installed, otherwise
+# the bundled OpenBLAS) before any solve calls into it.
+configure_blas_backend()
+
+from .enumerations import ModelStatus, ObjectiveSense, PresolveRule, VariableType  # noqa: E402
+from .linprog_interface import linprog  # noqa: E402
+from .options import HighsOption  # noqa: E402
+from .result import LinearProblemSolution, OptimizeResult  # noqa: E402
+from .sparse_interface import solve_linear_problem_sparse  # noqa: E402
+from .validation import HIGHS_INFINITY, solve_linear_problem  # noqa: E402
 
 __all__ = [
     "HIGHS_INFINITY",
