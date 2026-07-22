@@ -46,26 +46,74 @@ strip_tool = find_program('llvm-strip', 'strip', required: false)
 should_strip = get_option('strip') and python3.found() and strip_tool.found()
 strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
-install_subdir(
-  'bin',
-  install_dir: get_option('libdir'),
-  strip_directory: true,
-  exclude_files: []
-    + (should_strip ? ['libz.dll',] : []),
-)
+runtime_dir_name = 'bin'
 
+runtime_dir = meson.current_source_dir() / runtime_dir_name
+prune_unused_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'prune_unused_libs.py'
+reachable_libs = []
+if python3.found()
+  prune_result = run_command(
+    python3,
+    prune_unused_libs,
+    runtime_dir,
 
-if should_strip
-  custom_target(
-    'z-stripped',
-    input: 'bin/libz.dll',
-    output: 'libz.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
+    'libz.dll',
+
+    check: false,
   )
+  if prune_result.returncode() == 0
+    foreach line : prune_result.stdout().split('\n')
+      name = line.strip()
+      if name != ''
+        reachable_libs += name
+      endif
+    endforeach
+  endif
 endif
 
+stripped_separately = should_strip ? ['libz.dll',] : []
+
+if reachable_libs.length() > 0
+  install_libs = []
+  foreach name : reachable_libs
+    if should_strip
+      custom_target(
+        name + '-stripped',
+        input: runtime_dir_name / name,
+        output: name,
+        command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+        install: true,
+        install_dir: get_option('libdir'),
+      )
+    else
+      install_libs += runtime_dir_name / name
+    endif
+  endforeach
+  if install_libs.length() > 0
+    install_data(install_libs, install_dir: get_option('libdir'))
+  endif
+else
+
+  install_subdir(
+    'bin',
+    install_dir: get_option('libdir'),
+    strip_directory: true,
+    exclude_files: [] + stripped_separately,
+  )
+
+
+  if should_strip
+    custom_target(
+      'z-stripped',
+      input: 'bin/libz.dll',
+      output: 'libz.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+endif
 
 zlib_dep = declare_dependency(
   version: '1.3.2+0',
@@ -78,4 +126,4 @@ zlib_dep = declare_dependency(
     CompilerSupportLibraries_dep,
 
   ],
-)
+)

@@ -86,81 +86,140 @@ strip_tool = find_program('llvm-strip', 'strip', required: false)
 should_strip = get_option('strip') and python3.found() and strip_tool.found()
 strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
-install_subdir(
-  'lib',
-  install_dir: get_option('libdir'),
-  strip_directory: true,
-  exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
-  exclude_files: should_strip ? ['libatomic.1.dylib','libgcc_s.1.1.dylib','libgfortran.5.dylib','libgomp.1.dylib','libssp.0.dylib','libstdc++.6.dylib',] : [],
-)
+runtime_dir_name = 'lib'
 
+runtime_dir = meson.current_source_dir() / runtime_dir_name
+prune_unused_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'prune_unused_libs.py'
+reachable_libs = []
+if python3.found()
+  prune_result = run_command(
+    python3,
+    prune_unused_libs,
+    runtime_dir,
 
-if should_strip
-  custom_target(
-    'atomic-stripped',
-    input: 'lib/libatomic.1.dylib',
-    output: 'libatomic.1.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
+    'libatomic.1.dylib',
+
+    'libgcc_s.1.1.dylib',
+
+    'libgfortran.5.dylib',
+
+    'libgomp.1.dylib',
+
+    'libssp.0.dylib',
+
+    'libstdc++.6.dylib',
+
+    check: false,
   )
+  if prune_result.returncode() == 0
+    foreach line : prune_result.stdout().split('\n')
+      name = line.strip()
+      if name != ''
+        reachable_libs += name
+      endif
+    endforeach
+  endif
 endif
 
-if should_strip
-  custom_target(
-    'gcc_s-stripped',
-    input: 'lib/libgcc_s.1.1.dylib',
-    output: 'libgcc_s.1.1.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+stripped_separately = should_strip ? ['libatomic.1.dylib','libgcc_s.1.1.dylib','libgfortran.5.dylib','libgomp.1.dylib','libssp.0.dylib','libstdc++.6.dylib',] : []
 
-if should_strip
-  custom_target(
-    'gfortran-stripped',
-    input: 'lib/libgfortran.5.dylib',
-    output: 'libgfortran.5.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+if reachable_libs.length() > 0
+  install_libs = []
+  foreach name : reachable_libs
+    if should_strip
+      custom_target(
+        name + '-stripped',
+        input: runtime_dir_name / name,
+        output: name,
+        command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+        install: true,
+        install_dir: get_option('libdir'),
+      )
+    else
+      install_libs += runtime_dir_name / name
+    endif
+  endforeach
+  if install_libs.length() > 0
+    install_data(install_libs, install_dir: get_option('libdir'))
+  endif
+else
 
-if should_strip
-  custom_target(
-    'gomp-stripped',
-    input: 'lib/libgomp.1.dylib',
-    output: 'libgomp.1.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
+  install_subdir(
+    'lib',
     install_dir: get_option('libdir'),
+    strip_directory: true,
+    exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+    exclude_files: stripped_separately,
   )
-endif
 
-if should_strip
-  custom_target(
-    'ssp-stripped',
-    input: 'lib/libssp.0.dylib',
-    output: 'libssp.0.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
 
-if should_strip
-  custom_target(
-    'stdc++-stripped',
-    input: 'lib/libstdc++.6.dylib',
-    output: 'libstdc++.6.dylib',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+  if should_strip
+    custom_target(
+      'atomic-stripped',
+      input: 'lib/libatomic.1.dylib',
+      output: 'libatomic.1.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
 
+  if should_strip
+    custom_target(
+      'gcc_s-stripped',
+      input: 'lib/libgcc_s.1.1.dylib',
+      output: 'libgcc_s.1.1.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gfortran-stripped',
+      input: 'lib/libgfortran.5.dylib',
+      output: 'libgfortran.5.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gomp-stripped',
+      input: 'lib/libgomp.1.dylib',
+      output: 'libgomp.1.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'ssp-stripped',
+      input: 'lib/libssp.0.dylib',
+      output: 'libssp.0.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'stdc++-stripped',
+      input: 'lib/libstdc++.6.dylib',
+      output: 'libstdc++.6.dylib',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+endif
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',
@@ -181,4 +240,4 @@ compilersupportlibraries_dep = declare_dependency(
 
 
   ],
-)
+)

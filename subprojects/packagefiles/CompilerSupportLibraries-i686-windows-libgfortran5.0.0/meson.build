@@ -149,81 +149,139 @@ strip_tool = find_program('llvm-strip', 'strip', required: false)
 should_strip = get_option('strip') and python3.found() and strip_tool.found()
 strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
-install_subdir(
-  'bin',
-  install_dir: get_option('libdir'),
-  strip_directory: true,
-  exclude_files: []
-    + (should_strip ? ['libatomic-1.dll','libgcc_s_sjlj-1.dll','libgfortran-5.dll','libgomp-1.dll','libssp-0.dll','libstdc++-6.dll',] : []),
-)
+runtime_dir_name = 'bin'
 
+runtime_dir = meson.current_source_dir() / runtime_dir_name
+prune_unused_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'prune_unused_libs.py'
+reachable_libs = []
+if python3.found()
+  prune_result = run_command(
+    python3,
+    prune_unused_libs,
+    runtime_dir,
 
-if should_strip
-  custom_target(
-    'atomic-1-stripped',
-    input: 'bin/libatomic-1.dll',
-    output: 'libatomic-1.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
+    'libatomic-1.dll',
+
+    'libgcc_s_sjlj-1.dll',
+
+    'libgfortran-5.dll',
+
+    'libgomp-1.dll',
+
+    'libssp-0.dll',
+
+    'libstdc++-6.dll',
+
+    check: false,
   )
+  if prune_result.returncode() == 0
+    foreach line : prune_result.stdout().split('\n')
+      name = line.strip()
+      if name != ''
+        reachable_libs += name
+      endif
+    endforeach
+  endif
 endif
 
-if should_strip
-  custom_target(
-    'gcc_s_sjlj-1-stripped',
-    input: 'bin/libgcc_s_sjlj-1.dll',
-    output: 'libgcc_s_sjlj-1.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+stripped_separately = should_strip ? ['libatomic-1.dll','libgcc_s_sjlj-1.dll','libgfortran-5.dll','libgomp-1.dll','libssp-0.dll','libstdc++-6.dll',] : []
 
-if should_strip
-  custom_target(
-    'gfortran-5-stripped',
-    input: 'bin/libgfortran-5.dll',
-    output: 'libgfortran-5.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+if reachable_libs.length() > 0
+  install_libs = []
+  foreach name : reachable_libs
+    if should_strip
+      custom_target(
+        name + '-stripped',
+        input: runtime_dir_name / name,
+        output: name,
+        command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+        install: true,
+        install_dir: get_option('libdir'),
+      )
+    else
+      install_libs += runtime_dir_name / name
+    endif
+  endforeach
+  if install_libs.length() > 0
+    install_data(install_libs, install_dir: get_option('libdir'))
+  endif
+else
 
-if should_strip
-  custom_target(
-    'gomp-1-stripped',
-    input: 'bin/libgomp-1.dll',
-    output: 'libgomp-1.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
+  install_subdir(
+    'bin',
     install_dir: get_option('libdir'),
+    strip_directory: true,
+    exclude_files: [] + stripped_separately,
   )
-endif
 
-if should_strip
-  custom_target(
-    'ssp-0-stripped',
-    input: 'bin/libssp-0.dll',
-    output: 'libssp-0.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
 
-if should_strip
-  custom_target(
-    'stdc++-6-stripped',
-    input: 'bin/libstdc++-6.dll',
-    output: 'libstdc++-6.dll',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+  if should_strip
+    custom_target(
+      'atomic-1-stripped',
+      input: 'bin/libatomic-1.dll',
+      output: 'libatomic-1.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
 
+  if should_strip
+    custom_target(
+      'gcc_s_sjlj-1-stripped',
+      input: 'bin/libgcc_s_sjlj-1.dll',
+      output: 'libgcc_s_sjlj-1.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gfortran-5-stripped',
+      input: 'bin/libgfortran-5.dll',
+      output: 'libgfortran-5.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gomp-1-stripped',
+      input: 'bin/libgomp-1.dll',
+      output: 'libgomp-1.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'ssp-0-stripped',
+      input: 'bin/libssp-0.dll',
+      output: 'libssp-0.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'stdc++-6-stripped',
+      input: 'bin/libstdc++-6.dll',
+      output: 'libstdc++-6.dll',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+endif
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',
@@ -244,4 +302,4 @@ compilersupportlibraries_dep = declare_dependency(
 
 
   ],
-)
+)

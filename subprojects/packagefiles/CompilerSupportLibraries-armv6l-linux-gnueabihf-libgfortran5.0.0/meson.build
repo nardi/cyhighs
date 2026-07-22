@@ -86,81 +86,140 @@ strip_tool = find_program('llvm-strip', 'strip', required: false)
 should_strip = get_option('strip') and python3.found() and strip_tool.found()
 strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
-install_subdir(
-  'lib',
-  install_dir: get_option('libdir'),
-  strip_directory: true,
-  exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
-  exclude_files: should_strip ? ['libatomic.so','libgcc_s.so','libgfortran.so','libgomp.so','libssp.so','libstdc++.so',] : [],
-)
+runtime_dir_name = 'lib'
 
+runtime_dir = meson.current_source_dir() / runtime_dir_name
+prune_unused_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'prune_unused_libs.py'
+reachable_libs = []
+if python3.found()
+  prune_result = run_command(
+    python3,
+    prune_unused_libs,
+    runtime_dir,
 
-if should_strip
-  custom_target(
-    'atomic-stripped',
-    input: 'lib/libatomic.so',
-    output: 'libatomic.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
+    'libatomic.so',
+
+    'libgcc_s.so',
+
+    'libgfortran.so',
+
+    'libgomp.so',
+
+    'libssp.so',
+
+    'libstdc++.so',
+
+    check: false,
   )
+  if prune_result.returncode() == 0
+    foreach line : prune_result.stdout().split('\n')
+      name = line.strip()
+      if name != ''
+        reachable_libs += name
+      endif
+    endforeach
+  endif
 endif
 
-if should_strip
-  custom_target(
-    'gcc_s-stripped',
-    input: 'lib/libgcc_s.so',
-    output: 'libgcc_s.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+stripped_separately = should_strip ? ['libatomic.so','libgcc_s.so','libgfortran.so','libgomp.so','libssp.so','libstdc++.so',] : []
 
-if should_strip
-  custom_target(
-    'gfortran-stripped',
-    input: 'lib/libgfortran.so',
-    output: 'libgfortran.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+if reachable_libs.length() > 0
+  install_libs = []
+  foreach name : reachable_libs
+    if should_strip
+      custom_target(
+        name + '-stripped',
+        input: runtime_dir_name / name,
+        output: name,
+        command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+        install: true,
+        install_dir: get_option('libdir'),
+      )
+    else
+      install_libs += runtime_dir_name / name
+    endif
+  endforeach
+  if install_libs.length() > 0
+    install_data(install_libs, install_dir: get_option('libdir'))
+  endif
+else
 
-if should_strip
-  custom_target(
-    'gomp-stripped',
-    input: 'lib/libgomp.so',
-    output: 'libgomp.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
+  install_subdir(
+    'lib',
     install_dir: get_option('libdir'),
+    strip_directory: true,
+    exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+    exclude_files: stripped_separately,
   )
-endif
 
-if should_strip
-  custom_target(
-    'ssp-stripped',
-    input: 'lib/libssp.so',
-    output: 'libssp.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
 
-if should_strip
-  custom_target(
-    'stdc++-stripped',
-    input: 'lib/libstdc++.so',
-    output: 'libstdc++.so',
-    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: get_option('libdir'),
-  )
-endif
+  if should_strip
+    custom_target(
+      'atomic-stripped',
+      input: 'lib/libatomic.so',
+      output: 'libatomic.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
 
+  if should_strip
+    custom_target(
+      'gcc_s-stripped',
+      input: 'lib/libgcc_s.so',
+      output: 'libgcc_s.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gfortran-stripped',
+      input: 'lib/libgfortran.so',
+      output: 'libgfortran.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'gomp-stripped',
+      input: 'lib/libgomp.so',
+      output: 'libgomp.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'ssp-stripped',
+      input: 'lib/libssp.so',
+      output: 'libssp.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+  if should_strip
+    custom_target(
+      'stdc++-stripped',
+      input: 'lib/libstdc++.so',
+      output: 'libstdc++.so',
+      command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+      install: true,
+      install_dir: get_option('libdir'),
+    )
+  endif
+
+endif
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',
@@ -181,4 +240,4 @@ compilersupportlibraries_dep = declare_dependency(
 
 
   ],
-)
+)
