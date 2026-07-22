@@ -18,6 +18,7 @@ dll_to_lib = meson.current_source_dir() / '..' / 'packagefiles' / 'dll_to_lib.py
 
 
 
+
 if is_msvc and python3.found() and fs.is_file('bin/libblastrampoline-5.dll') and not fs.is_file('lib/blastrampoline-5.lib')
   libblastrampoline_import_lib = custom_target(
     'blastrampoline-5-msvc-import-lib',
@@ -27,21 +28,44 @@ if is_msvc and python3.found() and fs.is_file('bin/libblastrampoline-5.dll') and
   )
   libblastrampoline = declare_dependency(link_with: libblastrampoline_import_lib)
 else
-  libblastrampoline = cc.find_library('blastrampoline-5', dirs: meson.current_source_dir() / 'lib')
+libblastrampoline = cc.find_library('blastrampoline-5', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libblastrampoline.found()
+  if not fs.is_file('bin/libblastrampoline-5.dll')
+    error('libblastrampoline-x86_64-windows: no linkable blastrampoline-5 in lib/, and bin/libblastrampoline-5.dll is missing from the extracted tarball')
+  endif
+  libblastrampoline = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libblastrampoline-5.dll'])
+endif
+
 endif
 
 
 
 CompilerSupportLibraries_dep = dependency('CompilerSupportLibraries_jll')
 
-
-install_subdir('bin', install_dir: get_option('libdir'), strip_directory: true)
-
 strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
+
+install_subdir(
+  'bin',
+  install_dir: get_option('libdir'),
+  strip_directory: true,
+  exclude_files: []
+    + (should_strip ? ['libblastrampoline-5.dll',] : []),
+)
+
+
+if should_strip
+  custom_target(
+    'blastrampoline-5-stripped',
+    input: 'bin/libblastrampoline-5.dll',
+    output: 'libblastrampoline-5.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 libblastrampoline_dep = declare_dependency(
   version: '5.15.0+0',

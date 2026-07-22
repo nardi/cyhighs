@@ -15,65 +15,152 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-# Not every library in this tarball ships the unversioned dev symlink (e.g.
-# libatomic does, libgcc_s does not), so each falls back to linking the
-# exact versioned file installed below when the plain lookup fails.
 
 libatomic = cc.find_library('atomic', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libatomic.found()
-  libatomic = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libatomic.1.dylib'])
+  if not fs.is_file('lib/libatomic.1.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable atomic in lib/, and lib/libatomic.1.dylib is missing from the extracted tarball')
+  endif
+  libatomic = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libatomic.1.dylib'])
 endif
+
 
 
 
 libgcc_s = cc.find_library('gcc_s', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libgcc_s.found()
-  libgcc_s = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgcc_s.1.1.dylib'])
+  if not fs.is_file('lib/libgcc_s.1.1.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable gcc_s in lib/, and lib/libgcc_s.1.1.dylib is missing from the extracted tarball')
+  endif
+  libgcc_s = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgcc_s.1.1.dylib'])
 endif
+
 
 
 
 libgfortran = cc.find_library('gfortran', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libgfortran.found()
-  libgfortran = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgfortran.5.dylib'])
+  if not fs.is_file('lib/libgfortran.5.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable gfortran in lib/, and lib/libgfortran.5.dylib is missing from the extracted tarball')
+  endif
+  libgfortran = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgfortran.5.dylib'])
 endif
+
 
 
 
 libgomp = cc.find_library('gomp', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libgomp.found()
-  libgomp = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libgomp.1.dylib'])
+  if not fs.is_file('lib/libgomp.1.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable gomp in lib/, and lib/libgomp.1.dylib is missing from the extracted tarball')
+  endif
+  libgomp = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgomp.1.dylib'])
 endif
+
 
 
 
 libssp = cc.find_library('ssp', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libssp.found()
-  libssp = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libssp.0.dylib'])
+  if not fs.is_file('lib/libssp.0.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable ssp in lib/, and lib/libssp.0.dylib is missing from the extracted tarball')
+  endif
+  libssp = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libssp.0.dylib'])
 endif
+
 
 
 
 libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib', required: false)
 if not libstdcxx.found()
-  libstdcxx = declare_dependency(link_args: [meson.current_source_dir() / 'lib' / 'libstdc++.6.dylib'])
+  if not fs.is_file('lib/libstdc++.6.dylib')
+    error('CompilerSupportLibraries-x86_64-darwin-libgfortran5.0.0: no linkable stdc++ in lib/, and lib/libstdc++.6.dylib is missing from the extracted tarball')
+  endif
+  libstdcxx = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libstdc++.6.dylib'])
 endif
 
 
 
+
+strip_tool = find_program('llvm-strip', 'strip', required: false)
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
 install_subdir(
   'lib',
   install_dir: get_option('libdir'),
   strip_directory: true,
   exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+  exclude_files: should_strip ? ['libatomic.1.dylib','libgcc_s.1.1.dylib','libgfortran.5.dylib','libgomp.1.dylib','libssp.0.dylib','libstdc++.6.dylib',] : [],
 )
 
-strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+
+if should_strip
+  custom_target(
+    'atomic-stripped',
+    input: 'lib/libatomic.1.dylib',
+    output: 'libatomic.1.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
+if should_strip
+  custom_target(
+    'gcc_s-stripped',
+    input: 'lib/libgcc_s.1.1.dylib',
+    output: 'libgcc_s.1.1.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gfortran-stripped',
+    input: 'lib/libgfortran.5.dylib',
+    output: 'libgfortran.5.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gomp-stripped',
+    input: 'lib/libgomp.1.dylib',
+    output: 'libgomp.1.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'ssp-stripped',
+    input: 'lib/libssp.0.dylib',
+    output: 'libssp.0.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'stdc++-stripped',
+    input: 'lib/libstdc++.6.dylib',
+    output: 'libstdc++.6.dylib',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',

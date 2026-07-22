@@ -15,23 +15,42 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-libblastrampoline = cc.find_library('blastrampoline', dirs: meson.current_source_dir() / 'lib')
+
+libblastrampoline = cc.find_library('blastrampoline', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libblastrampoline.found()
+  if not fs.is_file('lib/libblastrampoline.so')
+    error('libblastrampoline-aarch64-linux-musl: no linkable blastrampoline in lib/, and lib/libblastrampoline.so is missing from the extracted tarball')
+  endif
+  libblastrampoline = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libblastrampoline.so'])
+endif
 
 
 
+
+strip_tool = find_program('llvm-strip', 'strip', required: false)
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
 install_subdir(
   'lib',
   install_dir: get_option('libdir'),
   strip_directory: true,
   exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+  exclude_files: should_strip ? ['libblastrampoline.so',] : [],
 )
 
-strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+
+if should_strip
+  custom_target(
+    'blastrampoline-stripped',
+    input: 'lib/libblastrampoline.so',
+    output: 'libblastrampoline.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 libblastrampoline_dep = declare_dependency(
   version: '5.15.0+0',

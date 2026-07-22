@@ -15,27 +15,46 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-libopenblas = cc.find_library('openblas', dirs: meson.current_source_dir() / 'lib')
+
+libopenblas = cc.find_library('openblas', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libopenblas.found()
+  if not fs.is_file('lib/libopenblas.so')
+    error('OpenBLAS32-i686-linux-musl-libgfortran5.0.0: no linkable openblas in lib/, and lib/libopenblas.so is missing from the extracted tarball')
+  endif
+  libopenblas = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libopenblas.so'])
+endif
 
 
 
-libblastrampoline_dep = dependency('libblastrampoline_jll')
 
 CompilerSupportLibraries_dep = dependency('CompilerSupportLibraries_jll')
 
+libblastrampoline_dep = dependency('libblastrampoline_jll')
+
+strip_tool = find_program('llvm-strip', 'strip', required: false)
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
 install_subdir(
   'lib',
   install_dir: get_option('libdir'),
   strip_directory: true,
   exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+  exclude_files: should_strip ? ['libopenblas.so',] : [],
 )
 
-strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+
+if should_strip
+  custom_target(
+    'openblas-stripped',
+    input: 'lib/libopenblas.so',
+    output: 'libopenblas.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 openblas32_dep = declare_dependency(
   version: '0.3.33+2',
@@ -45,9 +64,9 @@ openblas32_dep = declare_dependency(
     libopenblas,
 
 
-    libblastrampoline_dep,
-
     CompilerSupportLibraries_dep,
+
+    libblastrampoline_dep,
 
   ],
 )

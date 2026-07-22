@@ -18,6 +18,7 @@ dll_to_lib = meson.current_source_dir() / '..' / 'packagefiles' / 'dll_to_lib.py
 
 
 
+
 if is_msvc and python3.found() and fs.is_file('bin/libatomic-1.dll') and not fs.is_file('lib/atomic-1.lib')
   libatomic_import_lib = custom_target(
     'atomic-1-msvc-import-lib',
@@ -27,7 +28,14 @@ if is_msvc and python3.found() and fs.is_file('bin/libatomic-1.dll') and not fs.
   )
   libatomic = declare_dependency(link_with: libatomic_import_lib)
 else
-  libatomic = cc.find_library('atomic-1', dirs: meson.current_source_dir() / 'lib')
+libatomic = cc.find_library('atomic-1', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libatomic.found()
+  if not fs.is_file('bin/libatomic-1.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable atomic-1 in lib/, and bin/libatomic-1.dll is missing from the extracted tarball')
+  endif
+  libatomic = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libatomic-1.dll'])
+endif
+
 endif
 
 
@@ -41,7 +49,14 @@ if is_msvc and python3.found() and fs.is_file('bin/libgcc_s_sjlj-1.dll') and not
   )
   libgcc_s = declare_dependency(link_with: libgcc_s_import_lib)
 else
-  libgcc_s = cc.find_library('gcc_s_sjlj-1', dirs: meson.current_source_dir() / 'lib')
+libgcc_s = cc.find_library('gcc_s_sjlj-1', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgcc_s.found()
+  if not fs.is_file('bin/libgcc_s_sjlj-1.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable gcc_s_sjlj-1 in lib/, and bin/libgcc_s_sjlj-1.dll is missing from the extracted tarball')
+  endif
+  libgcc_s = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libgcc_s_sjlj-1.dll'])
+endif
+
 endif
 
 
@@ -55,7 +70,14 @@ if is_msvc and python3.found() and fs.is_file('bin/libgfortran-5.dll') and not f
   )
   libgfortran = declare_dependency(link_with: libgfortran_import_lib)
 else
-  libgfortran = cc.find_library('gfortran-5', dirs: meson.current_source_dir() / 'lib')
+libgfortran = cc.find_library('gfortran-5', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgfortran.found()
+  if not fs.is_file('bin/libgfortran-5.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable gfortran-5 in lib/, and bin/libgfortran-5.dll is missing from the extracted tarball')
+  endif
+  libgfortran = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libgfortran-5.dll'])
+endif
+
 endif
 
 
@@ -69,7 +91,14 @@ if is_msvc and python3.found() and fs.is_file('bin/libgomp-1.dll') and not fs.is
   )
   libgomp = declare_dependency(link_with: libgomp_import_lib)
 else
-  libgomp = cc.find_library('gomp-1', dirs: meson.current_source_dir() / 'lib')
+libgomp = cc.find_library('gomp-1', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgomp.found()
+  if not fs.is_file('bin/libgomp-1.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable gomp-1 in lib/, and bin/libgomp-1.dll is missing from the extracted tarball')
+  endif
+  libgomp = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libgomp-1.dll'])
+endif
+
 endif
 
 
@@ -83,7 +112,14 @@ if is_msvc and python3.found() and fs.is_file('bin/libssp-0.dll') and not fs.is_
   )
   libssp = declare_dependency(link_with: libssp_import_lib)
 else
-  libssp = cc.find_library('ssp-0', dirs: meson.current_source_dir() / 'lib')
+libssp = cc.find_library('ssp-0', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libssp.found()
+  if not fs.is_file('bin/libssp-0.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable ssp-0 in lib/, and bin/libssp-0.dll is missing from the extracted tarball')
+  endif
+  libssp = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libssp-0.dll'])
+endif
+
 endif
 
 
@@ -97,19 +133,97 @@ if is_msvc and python3.found() and fs.is_file('bin/libstdc++-6.dll') and not fs.
   )
   libstdcxx = declare_dependency(link_with: libstdcxx_import_lib)
 else
-  libstdcxx = cc.find_library('stdc++-6', dirs: meson.current_source_dir() / 'lib')
+libstdcxx = cc.find_library('stdc++-6', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libstdcxx.found()
+  if not fs.is_file('bin/libstdc++-6.dll')
+    error('CompilerSupportLibraries-i686-windows-libgfortran5.0.0: no linkable stdc++-6 in lib/, and bin/libstdc++-6.dll is missing from the extracted tarball')
+  endif
+  libstdcxx = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libstdc++-6.dll'])
+endif
+
 endif
 
 
-
-
-install_subdir('bin', install_dir: get_option('libdir'), strip_directory: true)
 
 strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
+
+install_subdir(
+  'bin',
+  install_dir: get_option('libdir'),
+  strip_directory: true,
+  exclude_files: []
+    + (should_strip ? ['libatomic-1.dll','libgcc_s_sjlj-1.dll','libgfortran-5.dll','libgomp-1.dll','libssp-0.dll','libstdc++-6.dll',] : []),
+)
+
+
+if should_strip
+  custom_target(
+    'atomic-1-stripped',
+    input: 'bin/libatomic-1.dll',
+    output: 'libatomic-1.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
+if should_strip
+  custom_target(
+    'gcc_s_sjlj-1-stripped',
+    input: 'bin/libgcc_s_sjlj-1.dll',
+    output: 'libgcc_s_sjlj-1.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gfortran-5-stripped',
+    input: 'bin/libgfortran-5.dll',
+    output: 'libgfortran-5.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gomp-1-stripped',
+    input: 'bin/libgomp-1.dll',
+    output: 'libgomp-1.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'ssp-0-stripped',
+    input: 'bin/libssp-0.dll',
+    output: 'libssp-0.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'stdc++-6-stripped',
+    input: 'bin/libstdc++-6.dll',
+    output: 'libstdc++-6.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',

@@ -15,29 +15,48 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-libhighs = cc.find_library('highs', dirs: meson.current_source_dir() / 'lib')
+
+libhighs = cc.find_library('highs', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libhighs.found()
+  if not fs.is_file('lib/libhighs.so')
+    error('HiGHS-aarch64-linux-musl-cxx11: no linkable highs in lib/, and lib/libhighs.so is missing from the extracted tarball')
+  endif
+  libhighs = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libhighs.so'])
+endif
 
 
 
-libblastrampoline_dep = dependency('libblastrampoline_jll')
-
-Zlib_dep = dependency('Zlib_jll')
 
 CompilerSupportLibraries_dep = dependency('CompilerSupportLibraries_jll')
 
+Zlib_dep = dependency('Zlib_jll')
+
+libblastrampoline_dep = dependency('libblastrampoline_jll')
+
+strip_tool = find_program('llvm-strip', 'strip', required: false)
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
 install_subdir(
   'lib',
   install_dir: get_option('libdir'),
   strip_directory: true,
   exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+  exclude_files: should_strip ? ['libhighs.so',] : [],
 )
 
-strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+
+if should_strip
+  custom_target(
+    'highs-stripped',
+    input: 'lib/libhighs.so',
+    output: 'libhighs.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 highs_dep = declare_dependency(
   version: '1.15.1+0',
@@ -47,11 +66,11 @@ highs_dep = declare_dependency(
     libhighs,
 
 
-    libblastrampoline_dep,
+    CompilerSupportLibraries_dep,
 
     Zlib_dep,
 
-    CompilerSupportLibraries_dep,
+    libblastrampoline_dep,
 
   ],
 )

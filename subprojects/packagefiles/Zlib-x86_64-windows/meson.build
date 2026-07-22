@@ -18,6 +18,7 @@ dll_to_lib = meson.current_source_dir() / '..' / 'packagefiles' / 'dll_to_lib.py
 
 
 
+
 if is_msvc and python3.found() and fs.is_file('bin/libz.dll') and not fs.is_file('lib/z.lib')
   libz_import_lib = custom_target(
     'z-msvc-import-lib',
@@ -27,21 +28,44 @@ if is_msvc and python3.found() and fs.is_file('bin/libz.dll') and not fs.is_file
   )
   libz = declare_dependency(link_with: libz_import_lib)
 else
-  libz = cc.find_library('z', dirs: meson.current_source_dir() / 'lib')
+libz = cc.find_library('z', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libz.found()
+  if not fs.is_file('bin/libz.dll')
+    error('Zlib-x86_64-windows: no linkable z in lib/, and bin/libz.dll is missing from the extracted tarball')
+  endif
+  libz = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libz.dll'])
+endif
+
 endif
 
 
 
 CompilerSupportLibraries_dep = dependency('CompilerSupportLibraries_jll')
 
-
-install_subdir('bin', install_dir: get_option('libdir'), strip_directory: true)
-
 strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
+
+install_subdir(
+  'bin',
+  install_dir: get_option('libdir'),
+  strip_directory: true,
+  exclude_files: []
+    + (should_strip ? ['libz.dll',] : []),
+)
+
+
+if should_strip
+  custom_target(
+    'z-stripped',
+    input: 'bin/libz.dll',
+    output: 'libz.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 zlib_dep = declare_dependency(
   version: '1.3.2+0',

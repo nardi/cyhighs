@@ -18,6 +18,7 @@ dll_to_lib = meson.current_source_dir() / '..' / 'packagefiles' / 'dll_to_lib.py
 
 
 
+
 if is_msvc and python3.found() and fs.is_file('bin/libhighs.dll') and not fs.is_file('lib/highs.lib')
   libhighs_import_lib = custom_target(
     'highs-msvc-import-lib',
@@ -27,25 +28,48 @@ if is_msvc and python3.found() and fs.is_file('bin/libhighs.dll') and not fs.is_
   )
   libhighs = declare_dependency(link_with: libhighs_import_lib)
 else
-  libhighs = cc.find_library('highs', dirs: meson.current_source_dir() / 'lib')
+libhighs = cc.find_library('highs', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libhighs.found()
+  if not fs.is_file('bin/libhighs.dll')
+    error('HiGHS-x86_64-windows-cxx11: no linkable highs in lib/, and bin/libhighs.dll is missing from the extracted tarball')
+  endif
+  libhighs = declare_dependency(link_args: [meson.current_source_dir() / 'bin/libhighs.dll'])
+endif
+
 endif
 
 
-
-libblastrampoline_dep = dependency('libblastrampoline_jll')
-
-Zlib_dep = dependency('Zlib_jll')
 
 CompilerSupportLibraries_dep = dependency('CompilerSupportLibraries_jll')
 
+Zlib_dep = dependency('Zlib_jll')
 
-install_subdir('bin', install_dir: get_option('libdir'), strip_directory: true)
+libblastrampoline_dep = dependency('libblastrampoline_jll')
 
 strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
+
+install_subdir(
+  'bin',
+  install_dir: get_option('libdir'),
+  strip_directory: true,
+  exclude_files: ['highs.exe', ]
+    + (should_strip ? ['libhighs.dll',] : []),
+)
+
+
+if should_strip
+  custom_target(
+    'highs-stripped',
+    input: 'bin/libhighs.dll',
+    output: 'libhighs.dll',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
 
 highs_dep = declare_dependency(
   version: '1.15.1+0',
@@ -55,11 +79,11 @@ highs_dep = declare_dependency(
     libhighs,
 
 
-    libblastrampoline_dep,
+    CompilerSupportLibraries_dep,
 
     Zlib_dep,
 
-    CompilerSupportLibraries_dep,
+    libblastrampoline_dep,
 
   ],
 )

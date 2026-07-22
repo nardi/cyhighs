@@ -15,43 +15,152 @@ python3 = find_program('python3', 'python', required: false)
 
 
 
-libatomic = cc.find_library('atomic', dirs: meson.current_source_dir() / 'lib')
+
+libatomic = cc.find_library('atomic', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libatomic.found()
+  if not fs.is_file('lib/libatomic.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable atomic in lib/, and lib/libatomic.so is missing from the extracted tarball')
+  endif
+  libatomic = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libatomic.so'])
+endif
 
 
 
-libgcc_s = cc.find_library('gcc_s', dirs: meson.current_source_dir() / 'lib')
+
+libgcc_s = cc.find_library('gcc_s', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgcc_s.found()
+  if not fs.is_file('lib/libgcc_s.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable gcc_s in lib/, and lib/libgcc_s.so is missing from the extracted tarball')
+  endif
+  libgcc_s = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgcc_s.so'])
+endif
 
 
 
-libgfortran = cc.find_library('gfortran', dirs: meson.current_source_dir() / 'lib')
+
+libgfortran = cc.find_library('gfortran', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgfortran.found()
+  if not fs.is_file('lib/libgfortran.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable gfortran in lib/, and lib/libgfortran.so is missing from the extracted tarball')
+  endif
+  libgfortran = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgfortran.so'])
+endif
 
 
 
-libgomp = cc.find_library('gomp', dirs: meson.current_source_dir() / 'lib')
+
+libgomp = cc.find_library('gomp', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libgomp.found()
+  if not fs.is_file('lib/libgomp.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable gomp in lib/, and lib/libgomp.so is missing from the extracted tarball')
+  endif
+  libgomp = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libgomp.so'])
+endif
 
 
 
-libssp = cc.find_library('ssp', dirs: meson.current_source_dir() / 'lib')
+
+libssp = cc.find_library('ssp', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libssp.found()
+  if not fs.is_file('lib/libssp.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable ssp in lib/, and lib/libssp.so is missing from the extracted tarball')
+  endif
+  libssp = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libssp.so'])
+endif
 
 
 
-libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib')
+
+libstdcxx = cc.find_library('stdc++', dirs: meson.current_source_dir() / 'lib', required: false)
+if not libstdcxx.found()
+  if not fs.is_file('lib/libstdc++.so')
+    error('CompilerSupportLibraries-aarch64-freebsd-libgfortran5.0.0: no linkable stdc++ in lib/, and lib/libstdc++.so is missing from the extracted tarball')
+  endif
+  libstdcxx = declare_dependency(link_args: [meson.current_source_dir() / 'lib/libstdc++.so'])
+endif
 
 
 
+
+strip_tool = find_program('llvm-strip', 'strip', required: false)
+should_strip = get_option('strip') and python3.found() and strip_tool.found()
+strip_or_copy = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_or_copy.py'
 
 install_subdir(
   'lib',
   install_dir: get_option('libdir'),
   strip_directory: true,
   exclude_directories: ['cmake', 'pkgconfig', 'gcc'],
+  exclude_files: should_strip ? ['libatomic.so','libgcc_s.so','libgfortran.so','libgomp.so','libssp.so','libstdc++.so',] : [],
 )
 
-strip_tool = find_program('llvm-strip', 'strip', required: false)
-if get_option('strip') and python3.found() and strip_tool.found()
-  strip_libs = meson.current_source_dir() / '..' / 'packagefiles' / 'strip_libs.py'
-  meson.add_install_script(python3, strip_libs, strip_tool.full_path(), get_option('libdir'))
+
+if should_strip
+  custom_target(
+    'atomic-stripped',
+    input: 'lib/libatomic.so',
+    output: 'libatomic.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
 endif
+
+if should_strip
+  custom_target(
+    'gcc_s-stripped',
+    input: 'lib/libgcc_s.so',
+    output: 'libgcc_s.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gfortran-stripped',
+    input: 'lib/libgfortran.so',
+    output: 'libgfortran.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'gomp-stripped',
+    input: 'lib/libgomp.so',
+    output: 'libgomp.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'ssp-stripped',
+    input: 'lib/libssp.so',
+    output: 'libssp.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
+if should_strip
+  custom_target(
+    'stdc++-stripped',
+    input: 'lib/libstdc++.so',
+    output: 'libstdc++.so',
+    command: [python3, strip_or_copy, strip_tool.full_path(), '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('libdir'),
+  )
+endif
+
 
 compilersupportlibraries_dep = declare_dependency(
   version: '1.5.5+2',
