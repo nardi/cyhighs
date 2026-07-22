@@ -17,6 +17,9 @@ build-backend = "mesonpy"
 # importing _core, see the comment there.
 allow-windows-internal-shared-libs = true
 
+[tool.meson-python.args]
+setup = ["-Dstrip=true"]
+
 [project]
 name = "cyhighs"
 version = "0.2.2"
@@ -51,7 +54,9 @@ dependencies = ["numpy>=1.23.2", "scipy>=1.9.2"]
 # never shipped MKL for macOS or for any ARM target), so the environment
 # marker below makes `pip install cyhighs[mkl]` fail clearly on unsupported
 # platforms instead of silently installing nothing.
-mkl = ["mkl; (platform_system == 'Linux' or platform_system == 'Windows') and platform_machine in 'x86_64 AMD64'"]
+mkl = [
+    "mkl; (platform_system == 'Linux' or platform_system == 'Windows') and platform_machine in 'x86_64 AMD64'",
+]
 
 [project.urls]
 Homepage = "https://github.com/nardilam/cyhighs"
