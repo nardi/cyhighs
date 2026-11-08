@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794165637280,
+  "lastUpdate": 1794169352298,
   "repoUrl": "https://github.com/nardi/cyhighs",
   "entries": {
     "benchmarks-ubuntu-latest": [
@@ -387,6 +387,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.14179619884498343",
             "extra": "mean: 8.575463389300012 sec\nrounds: 10"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "committer": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "distinct": true,
+          "id": "37c8805ad67f84f0ca88774cb8a1b97187dbf42b",
+          "message": "chore: Update Zensical to 0.1.0 and switch to the Tufte theme\n\nThe `theme` submodule holds `zensical-tufte`, and `custom_dir` points at its directory, which extends the built-in theme. The theme loads its own fonts, so the built-in one loads none from Google Fonts, and the exclude plugin leaves the theme's packaging files out of the site. The switcher names cyhighs as the current one. The workflow checks out the submodule.",
+          "timestamp": "2026-11-08T21:10:52+01:00",
+          "tree_id": "7d28ea2a265b2cddbf06af8169bd8e87e992e1d5",
+          "url": "https://github.com/nardi/cyhighs/commit/37c8805ad67f84f0ca88774cb8a1b97187dbf42b"
+        },
+        "date": 1794169351736,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-100]",
+            "value": 862.5641219390674,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000055492752762523136",
+            "extra": "mean: 1.1593340999993984 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-1000]",
+            "value": 37.483911342992236,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002346327995892631",
+            "extra": "mean: 26.678112400000487 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-10000]",
+            "value": 0.13475015473153765,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053717327892575856",
+            "extra": "mean: 7.4211417567 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-100]",
+            "value": 208.3073035998204,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000526849351073347",
+            "extra": "mean: 4.800599800000782 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-1000]",
+            "value": 0.09358172241066831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.06292634414658269",
+            "extra": "mean: 10.685847345400003 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-100]",
+            "value": 816.3230654070484,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002170328306365488",
+            "extra": "mean: 1.2250051999956213 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-1000]",
+            "value": 37.53181858441937,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006479430981148657",
+            "extra": "mean: 26.644059299997025 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-10000]",
+            "value": 0.13559019606906372,
+            "unit": "iter/sec",
+            "range": "stddev: 0.05037901803805537",
+            "extra": "mean: 7.375164495599989 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-100]",
+            "value": 203.42379745574405,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005971472067230885",
+            "extra": "mean: 4.91584569999759 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-1000]",
+            "value": 0.0931362824073238,
+            "unit": "iter/sec",
+            "range": "stddev: 0.1542145040744637",
+            "extra": "mean: 10.736954215399999 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-100]",
+            "value": 743.3437654214719,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026125807163911347",
+            "extra": "mean: 1.3452725999968607 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-1000]",
+            "value": 36.394308428023756,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002337011996296951",
+            "extra": "mean: 27.476823800009242 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-10000]",
+            "value": 0.13406533239704574,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03101796131284318",
+            "extra": "mean: 7.459049868600005 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-100]",
+            "value": 197.71872139297773,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000041993866748085206",
+            "extra": "mean: 5.057689999989634 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-1000]",
+            "value": 0.09315340660377537,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051492258761046704",
+            "extra": "mean: 10.734980463499994 sec\nrounds: 10"
           }
         ]
       }
