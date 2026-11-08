@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794165896171,
+  "lastUpdate": 1794169250017,
   "repoUrl": "https://github.com/nardi/cyhighs",
   "entries": {
     "benchmarks-windows-latest": [
@@ -387,6 +387,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.1048654261874881",
             "extra": "mean: 11.806199819999994 sec\nrounds: 10"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "committer": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "distinct": true,
+          "id": "37c8805ad67f84f0ca88774cb8a1b97187dbf42b",
+          "message": "chore: Update Zensical to 0.1.0 and switch to the Tufte theme\n\nThe `theme` submodule holds `zensical-tufte`, and `custom_dir` points at its directory, which extends the built-in theme. The theme loads its own fonts, so the built-in one loads none from Google Fonts, and the exclude plugin leaves the theme's packaging files out of the site. The switcher names cyhighs as the current one. The workflow checks out the submodule.",
+          "timestamp": "2026-11-08T21:10:52+01:00",
+          "tree_id": "7d28ea2a265b2cddbf06af8169bd8e87e992e1d5",
+          "url": "https://github.com/nardi/cyhighs/commit/37c8805ad67f84f0ca88774cb8a1b97187dbf42b"
+        },
+        "date": 1794169248277,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-100]",
+            "value": 640.0409626215044,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001653075450385515",
+            "extra": "mean: 1.5624000000002525 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-1000]",
+            "value": 36.25864451411188,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005739274519834699",
+            "extra": "mean: 27.579629999979716 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-10000]",
+            "value": 0.15053707858685927,
+            "unit": "iter/sec",
+            "range": "stddev: 0.1098719318236465",
+            "extra": "mean: 6.64288167000002 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-100]",
+            "value": 164.44420325905608,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014759302491955018",
+            "extra": "mean: 6.081090000020595 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-1000]",
+            "value": 0.10000337951420728,
+            "unit": "iter/sec",
+            "range": "stddev: 0.1745853139057034",
+            "extra": "mean: 9.999662060000002 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-100]",
+            "value": 748.3573556079922,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009855279692031842",
+            "extra": "mean: 1.336259999993672 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-1000]",
+            "value": 36.41387426871195,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002674830802428672",
+            "extra": "mean: 27.46206000000484 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-10000]",
+            "value": 0.1488486233747725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12887616696826487",
+            "extra": "mean: 6.718234789999974 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-100]",
+            "value": 140.06896996074283,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008535129617858631",
+            "extra": "mean: 7.139340000003358 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-1000]",
+            "value": 0.0994069021383231,
+            "unit": "iter/sec",
+            "range": "stddev: 0.2673299509263632",
+            "extra": "mean: 10.059663650000038 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-100]",
+            "value": 789.1725525992157,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005706560067763378",
+            "extra": "mean: 1.2671499999669322 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-1000]",
+            "value": 38.260099040062094,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009766940535548278",
+            "extra": "mean: 26.136890000020685 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-10000]",
+            "value": 0.15276441608960412,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15939095635441408",
+            "extra": "mean: 6.546027049999975 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-100]",
+            "value": 163.9785122567089,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007184635147071233",
+            "extra": "mean: 6.098359999964487 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-1000]",
+            "value": 0.10912351253781019,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19909662966922467",
+            "extra": "mean: 9.163927889999968 sec\nrounds: 10"
           }
         ]
       }
