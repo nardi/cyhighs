@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794157802849,
+  "lastUpdate": 1794165835609,
   "repoUrl": "https://github.com/nardi/cyhighs",
   "entries": {
     "benchmarks-macos-latest": [
@@ -258,6 +258,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.6246713586158403",
             "extra": "mean: 8.170857975 sec\nrounds: 10"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "committer": {
+            "email": "mail@nardilam.nl",
+            "name": "Nardi Lam",
+            "username": "nardi"
+          },
+          "distinct": true,
+          "id": "2ac8aefdcc1f25f5c4515ca94d7d235fa3e9a9c4",
+          "message": "chore: Update Zensical to 0.1.0 and switch to the Tufte theme\n\nThe `theme` submodule holds `zensical-tufte`, and `custom_dir` points at its directory, which extends the built-in theme. The theme loads its own fonts, so the built-in one loads none from Google Fonts, and the exclude plugin leaves the theme's packaging files out of the site. The switcher names cyhighs as the current one. The workflow checks out the submodule.",
+          "timestamp": "2026-11-08T20:12:27+01:00",
+          "tree_id": "6bfe4393a9f023c130b911917518efdb661b0c49",
+          "url": "https://github.com/nardi/cyhighs/commit/2ac8aefdcc1f25f5c4515ca94d7d235fa3e9a9c4"
+        },
+        "date": 1794165834163,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-100]",
+            "value": 940.3025423460576,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00026297836006182755",
+            "extra": "mean: 1.0634874999965405 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-1000]",
+            "value": 32.678826438375886,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0056501320482458565",
+            "extra": "mean: 30.60085410000113 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[lp-10000]",
+            "value": 0.10547571487137027,
+            "unit": "iter/sec",
+            "range": "stddev: 1.5030798412890172",
+            "extra": "mean: 9.4808553914 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-100]",
+            "value": 173.7093715058009,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012718921654475983",
+            "extra": "mean: 5.756741800004761 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_array_solve[mip-1000]",
+            "value": 0.07142807955134643,
+            "unit": "iter/sec",
+            "range": "stddev: 1.7318356745594794",
+            "extra": "mean: 14.000096408599996 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-100]",
+            "value": 498.3192191065895,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001122175140547408",
+            "extra": "mean: 2.006745799997134 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-1000]",
+            "value": 27.703916596613777,
+            "unit": "iter/sec",
+            "range": "stddev: 0.007702322833809394",
+            "extra": "mean: 36.09597929998927 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[lp-10000]",
+            "value": 0.13543695150216714,
+            "unit": "iter/sec",
+            "range": "stddev: 1.005491458339988",
+            "extra": "mean: 7.383509366599992 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-100]",
+            "value": 246.15788768776375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000048386298931068606",
+            "extra": "mean: 4.062433299998247 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_sparse_solve[mip-1000]",
+            "value": 0.10103926346854027,
+            "unit": "iter/sec",
+            "range": "stddev: 0.6701906548548762",
+            "extra": "mean: 9.897142612399994 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-100]",
+            "value": 1068.1623217671256,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006044936496044078",
+            "extra": "mean: 936.1873000216292 usec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-1000]",
+            "value": 38.59282829475079,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005315774579994358",
+            "extra": "mean: 25.91154999997798 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[lp-10000]",
+            "value": 0.15336377169435567,
+            "unit": "iter/sec",
+            "range": "stddev: 0.2672793058664738",
+            "extra": "mean: 6.520444750100023 sec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-100]",
+            "value": 230.53426846990996,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000206613251392587",
+            "extra": "mean: 4.33774989999165 msec\nrounds: 10"
+          },
+          {
+            "name": "benchmarks/test_benchmarks.py::test_linprog_solve[mip-1000]",
+            "value": 0.09316172616673904,
+            "unit": "iter/sec",
+            "range": "stddev: 1.8230969647971855",
+            "extra": "mean: 10.73402180429997 sec\nrounds: 10"
           }
         ]
       }
