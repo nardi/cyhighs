@@ -7,6 +7,7 @@ _skbuild/
 
 # Zensical documentation build output
 /site/
+.cache/
 
 # Compiled artifacts
 *.so
